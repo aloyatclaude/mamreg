@@ -1,0 +1,5 @@
+# generated at deploy time / locally — never committed
+data/prices.json
+_site/
+__pycache__/
+.DS_Store
