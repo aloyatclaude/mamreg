@@ -32,8 +32,18 @@ ROOT = os.path.dirname(HERE)
 BOOK = os.path.join(ROOT, "data", "book.json")
 PRICES = os.path.join(ROOT, "data", "prices.json")
 
-BENCH = {"IN": "^CRSLDX", "TW": "^TWII", "KR": "^KS11", "US": "^GSPC", "HK": "^HSI", "JP": "^N225"}
+# Benchmark resolved from the Yahoo ticker suffix (mirrors fetch_prices.py / index.html).
+SUFFIX_BENCH = {
+    ".HK": "^HSI", ".SS": "000300.SS", ".SZ": "000300.SS", ".NS": "^CRSLDX", ".BO": "^BSESN",
+    ".TW": "^TWII", ".TWO": "^TWII", ".KS": "^KS11", ".KQ": "^KS11", ".SI": "^STI",
+    ".KL": "^KLSE", ".BK": "^SET.BK", ".JK": "^JKSE", ".PS": "^PSI", ".T": "^N225",
+}
 DEFAULT_BENCH = "^GSPC"
+
+
+def bench_of(sym):
+    i = (sym or "").rfind(".")
+    return SUFFIX_BENCH.get(sym[i:] if i > 0 else "", DEFAULT_BENCH)
 
 
 def on_or_before(dates_sorted, cmap, target):
@@ -65,7 +75,7 @@ def main():
 
     for c in book.get("calls", []):
         cid, tk = c.get("id"), c.get("ticker")
-        bench = BENCH.get(c.get("market"), DEFAULT_BENCH)
+        bench = bench_of(tk)
         entryDate = c.get("entryDate") or ""
         end_target = c.get("exitDate") or date.today().strftime("%Y-%m-%d")
         rec = {"id": cid, "analyst": analysts.get(c.get("analyst"), c.get("analyst")),

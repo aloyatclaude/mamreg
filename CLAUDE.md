@@ -1,34 +1,39 @@
-# CLAUDE.md — Global Research Portal
+# CLAUDE.md — Research Portal (mamreg)
 
-Static, backend-less dashboard for one multi-market investment book: Holdings · Watchlist ·
-Calls · per-analyst KPI scorecard. Served from GitHub Pages; prices fetched at deploy time.
+Static, backend-less dashboard to **record & grade stock calls by analyst**, plus holdings by
+country. Served from GitHub Pages (`aloyatclaude/mamreg`); prices fetched at deploy time.
 
 ## Architecture (keep it this way)
 
-- **`index.html`** — the entire app: one self-contained file, inline CSS + vanilla JS,
-  Chart.js via CDN. No framework, no build step. Dark theme via CSS variables. Deep-linkable
-  tabs via `#hash`.
-- **`data/book.json`** — canonical, committed, human-owned: `analysts[] · holdings[] ·
-  watchlist[] · calls[]`. Source of truth; its git history is the audit trail.
-- **`data/prices.json`** — generated every deploy by `scripts/fetch_prices.py`; **never
-  commit it** (it's staged into the Pages artifact only).
-- **`scripts/*.py`** — **stdlib only, no API keys** (mirrors the Yahoo v8 chart approach).
-  `fetch_prices.py` builds the price feed; `verify_calls.py` is the reference scoring +
-  auditor and must stay numerically identical to the JS in `index.html` (`scoreCall`).
+- **`index.html`** — the whole app: one self-contained file, inline CSS + vanilla JS, **Chart.js**
+  and **pdf.js (v3 UMD)** via CDN. No framework, no build step. Dark theme. Deep-linkable via
+  `#analysts/<id>/<section>` and `#holdings`.
+- **`data/book.json`** — canonical, committed, human-owned: `analysts[] · holdings[] · calls[]`
+  (no more overview/watchlist). Source of truth; git history = audit trail.
+- **`data/prices.json`** — generated every deploy by `fetch_prices.py`; **never commit it**.
+- **`scripts/*.py`** — **stdlib only, no keys**. `verify_calls.py` must stay numerically identical
+  to `scoreCall` in `index.html`.
 - **`.github/workflows/deploy.yml`** — fetch prices → audit (non-blocking) → deploy to Pages.
 
-## Scoring invariants (don't quietly change)
+## Two tabs
 
-- Calls: returns from **adjusted** closes, **date-driven** (`adjClose` on the call/exit dates,
-  not the typed entry price). `alpha = stockRet − benchRet` on the row's market benchmark.
-- Buy hits if `alpha>0`; Sell hits if `alpha<0`; **Hold excluded** from hit-rate.
-- Holdings use **cost basis** (`price/entry−1`) — that's P&L, deliberately different from calls.
-- Benchmark per market: `IN ^CRSLDX · TW ^TWII · KR ^KS11 · US ^GSPC · HK ^HSI · JP ^N225`.
+- **Analysts** → per-analyst summary + segmented **Calls (open) / Historical Trades (closed) /
+  Coverage List**. Calls tables are editable (record calls here).
+- **Holdings** → grouped by country (HK/CN/IN/TW/KR/ASEAN); Cost · LTP · 1D/1W/1M/YTD · Return.
+  PDF upload → parse → review modal → fill.
 
-If you touch the scoring in one place, change it in both `index.html` and `verify_calls.py`
-and re-run `python3 scripts/verify_calls.py` to confirm they agree.
+## Invariants (don't quietly change)
+
+- Benchmark / currency / country resolve from the **Yahoo ticker suffix** — one map, mirrored in
+  `index.html` (`SUFFIX_*`), `fetch_prices.py` and `verify_calls.py`. Change all three together.
+- Call scoring: adjusted closes, date-driven; `alpha = stockRet − benchRet`; Buy hits α>0, Sell
+  hits α<0, **Hold excluded** from hit-rate. Holdings use cost basis (`LTP/entry−1`).
+- pdf.js runs **in the browser**; PDF rows are always shown in a **review modal** before saving.
+  Optional Claude key (`localStorage` `grp-claude-key`) upgrades extraction; GitHub token
+  (`grp-gh-token`) powers **Publish** (GitHub Contents API → commit `book.json`).
 
 ## Verify a change
 
 `python3 scripts/fetch_prices.py && python3 scripts/verify_calls.py && python3 -m http.server 8765`
-then open the tabs (or screenshot headless Chrome at `#overview/#holdings/#calls/#analysts`).
+then screenshot headless Chrome at `#analysts/mark/calls`, `#analysts/mark/historical`,
+`#holdings`, and `?pdftest` (runs the PDF parser on a built-in sample statement → review modal).

@@ -26,17 +26,37 @@ ROOT = os.path.dirname(HERE)
 BOOK = os.path.join(ROOT, "data", "book.json")
 OUT = os.path.join(ROOT, "data", "prices.json")
 
-# market -> benchmark index (Yahoo symbol). Overridable per row later if needed.
-BENCH = {
-    "IN": "^CRSLDX",  # Nifty 500
-    "TW": "^TWII",    # TAIEX
-    "KR": "^KS11",    # KOSPI
-    "US": "^GSPC",    # S&P 500
-    "HK": "^HSI",     # Hang Seng
-    "JP": "^N225",    # Nikkei 225
+# Benchmark index + currency resolved from the Yahoo ticker SUFFIX (works for ASEAN's
+# many exchanges, where one "country" bucket spans several markets).
+SUFFIX_BENCH = {
+    ".HK": "^HSI",       # Hong Kong
+    ".SS": "000300.SS", ".SZ": "000300.SS",  # China A (CSI 300)
+    ".NS": "^CRSLDX", ".BO": "^BSESN",       # India
+    ".TW": "^TWII", ".TWO": "^TWII",         # Taiwan
+    ".KS": "^KS11", ".KQ": "^KS11",          # Korea
+    ".SI": "^STI",  ".KL": "^KLSE", ".BK": "^SET.BK", ".JK": "^JKSE", ".PS": "^PSI",  # ASEAN
+    ".T": "^N225",                           # Japan
 }
-DEFAULT_BENCH = "^GSPC"
-MKT_CCY = {"IN": "INR", "TW": "TWD", "KR": "KRW", "US": "USD", "HK": "HKD", "JP": "JPY"}
+DEFAULT_BENCH = "^GSPC"  # US / bare symbols
+SUFFIX_CCY = {
+    ".HK": "HKD", ".SS": "CNY", ".SZ": "CNY", ".NS": "INR", ".BO": "INR",
+    ".TW": "TWD", ".TWO": "TWD", ".KS": "KRW", ".KQ": "KRW", ".SI": "SGD",
+    ".KL": "MYR", ".BK": "THB", ".JK": "IDR", ".PS": "PHP", ".T": "JPY",
+}
+DEFAULT_CCY = "USD"
+
+
+def suffix_of(sym):
+    i = sym.rfind(".")
+    return sym[i:] if i > 0 else ""
+
+
+def bench_of(sym):
+    return SUFFIX_BENCH.get(suffix_of(sym), DEFAULT_BENCH)
+
+
+def ccy_of(sym):
+    return SUFFIX_CCY.get(suffix_of(sym), DEFAULT_CCY)
 
 UA = "Mozilla/5.0 (global-research-portal price-fetch)"
 HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
@@ -194,16 +214,14 @@ def main():
         book = json.load(f)
 
     rows = book.get("holdings", []) + book.get("calls", []) + book.get("watchlist", [])
-    tickers, markets = [], set()
+    tickers = []
     for r in rows:
         t = r.get("ticker")
         if t and t not in tickers:
             tickers.append(t)
-        if r.get("market"):
-            markets.add(r["market"])
 
-    benchmarks = sorted({BENCH.get(m, DEFAULT_BENCH) for m in markets} or {DEFAULT_BENCH})
-    fx_pairs = sorted({"USD" + MKT_CCY.get(m, "USD") for m in markets if MKT_CCY.get(m, "USD") != "USD"})
+    benchmarks = sorted({bench_of(t) for t in tickers} or {DEFAULT_BENCH})
+    fx_pairs = sorted({"USD" + ccy_of(t) for t in tickers if ccy_of(t) != "USD"})
 
     print(f"Tickers: {len(tickers)} | benchmarks: {benchmarks} | fx: {fx_pairs}")
 

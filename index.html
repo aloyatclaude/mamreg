@@ -3,11 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Global Research Portal — Calls & Analyst KPI</title>
+<title>Research Portal — Calls by Analyst</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --page:#0c0f14; --surface:#151a22; --surface-2:#1b212b; --raise:#222a35;
@@ -15,8 +14,6 @@
   --text:#e8eaed; --text-2:#a7adb8; --muted:#6f7681;
   --accent:#e9a23b; --accent-dim:rgba(233,162,59,0.14);
   --up:#3fc78a; --down:#f06a6a; --up-bg:rgba(63,199,138,0.12); --down-bg:rgba(240,106,106,0.12);
-  /* dataviz dark categorical slots — analyst identity */
-  --s1:#3987e5; --s2:#199e70; --s3:#c98500; --s4:#008300; --s5:#9085e9; --s6:#e66767; --s7:#d55181; --s8:#d95926;
   --mono:'Roboto Mono',ui-monospace,monospace;
 }
 *{box-sizing:border-box}
@@ -29,11 +26,9 @@ body{
   color:var(--text); font-family:'Manrope',system-ui,-apple-system,sans-serif;
   font-size:14px; line-height:1.45; min-height:100vh;
 }
-a{color:inherit}
 .app{display:flex; min-height:100vh}
-/* ---- sidebar ---- */
-.side{width:210px; flex:0 0 210px; border-right:1px solid var(--border); padding:22px 14px; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:4px}
-.brand{font-family:'Fraunces',serif; font-size:19px; font-weight:600; letter-spacing:.2px; padding:0 8px 2px; line-height:1.2}
+.side{width:200px; flex:0 0 200px; border-right:1px solid var(--border); padding:22px 14px; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:4px}
+.brand{font-family:'Fraunces',serif; font-size:19px; font-weight:600; padding:0 8px 2px; line-height:1.2}
 .brand small{display:block; font-family:'Manrope'; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-top:5px}
 .nav{margin-top:16px; display:flex; flex-direction:column; gap:2px}
 .nav-item{display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:9px; cursor:pointer; color:var(--text-2); font-weight:600; font-size:13.5px; user-select:none}
@@ -41,40 +36,39 @@ a{color:inherit}
 .nav-item.active{background:var(--accent-dim); color:var(--accent)}
 .nav-item .dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.55}
 .side-foot{margin-top:auto; font-size:10.5px; color:var(--muted); padding:8px; line-height:1.5}
-/* ---- main ---- */
 .main{flex:1; min-width:0; padding:22px 26px 60px}
 .topbar{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px}
 .topbar h1{font-family:'Fraunces',serif; font-weight:600; font-size:23px; margin:0}
 .topbar .sub{color:var(--muted); font-size:12px; margin-top:3px}
-.tb-actions{display:flex; gap:8px; align-items:center}
+.tb-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .btn{background:var(--surface); border:1px solid var(--border-2); color:var(--text); padding:7px 13px; border-radius:8px; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer}
 .btn:hover{background:var(--surface-2)}
 .btn.gold{background:var(--accent); color:#1a1204; border-color:transparent}
 .btn.gold:hover{filter:brightness(1.06)}
 .btn.ghost{background:transparent}
-/* ---- cards / tiles ---- */
+.btn.sm{padding:5px 10px; font-size:12px}
 .grid{display:grid; gap:14px}
 .tiles{grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); margin-bottom:16px}
 .tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:13px 15px}
 .tile .k{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600}
 .tile .v{font-size:23px; font-weight:600; margin-top:5px; font-variant-numeric:tabular-nums}
-.tile .v small{font-size:13px; color:var(--text-2); font-weight:500}
+.tile .v small{font-size:12px; color:var(--text-2); font-weight:500}
 .panel{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; margin-bottom:16px}
 .panel h2{font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 3px}
 .panel .desc{color:var(--muted); font-size:12px; margin-bottom:12px}
-.two-col{display:grid; grid-template-columns:1.15fr .85fr; gap:16px}
-@media(max-width:1000px){.two-col{grid-template-columns:1fr}}
-/* ---- tables ---- */
+.seg{display:inline-flex; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px; margin-bottom:14px; flex-wrap:wrap}
+.seg button{background:transparent; border:0; color:var(--text-2); font:inherit; font-weight:600; font-size:13px; padding:6px 14px; border-radius:7px; cursor:pointer}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:var(--accent); color:#1a1204}
+.seg.small button{font-size:12px; padding:5px 12px}
 .tw{overflow-x:auto; border-radius:10px}
 table{width:100%; border-collapse:collapse; font-size:13px}
-th,td{padding:7px 8px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--border)}
+th,td{padding:7px 9px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--border)}
+th:first-child,td:first-child{text-align:left}
 input[type=number].cell::-webkit-outer-spin-button,input[type=number].cell::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 input[type=number].cell{-moz-appearance:textfield}
 input[type=date].cell{min-width:104px}
-th:first-child,td:first-child{text-align:left}
-th{color:var(--muted); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; position:sticky; top:0; background:var(--surface); cursor:default}
-th.sortable{cursor:pointer} th.sortable:hover{color:var(--text-2)}
-th .arr{opacity:.6; font-size:9px}
+th{color:var(--muted); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:700}
 tbody tr:hover{background:rgba(255,255,255,0.025)}
 td.num,th.num{font-family:var(--mono); font-variant-numeric:tabular-nums}
 .name{font-weight:600}
@@ -82,58 +76,56 @@ td.num,th.num{font-family:var(--mono); font-variant-numeric:tabular-nums}
 .link{cursor:pointer; border-bottom:1px dashed rgba(255,255,255,0.2)}
 .link:hover{color:var(--accent); border-color:var(--accent)}
 .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--text-2)}
-.grp-head td{background:var(--surface-2); color:var(--muted); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; text-align:left}
-/* inputs */
-input.cell, select.cell{background:var(--surface-2); border:1px solid transparent; color:var(--text); font:inherit; font-size:12.5px; padding:4px 7px; border-radius:6px; width:100%; min-width:60px; font-variant-numeric:tabular-nums}
+.grp-head td{background:var(--surface-2); color:var(--text-2); font-size:11px; letter-spacing:.05em; text-transform:uppercase; font-weight:700; text-align:left; padding-top:9px; padding-bottom:9px}
+.grp-head .cnt{color:var(--muted); font-weight:600}
+.subtotal td{border-top:1px solid var(--border-2); font-weight:700; color:var(--text-2); background:rgba(255,255,255,0.02)}
+input.cell, select.cell{background:var(--surface-2); border:1px solid transparent; color:var(--text); font:inherit; font-size:12.5px; padding:4px 7px; border-radius:6px; width:100%; min-width:56px; font-variant-numeric:tabular-nums}
 input.cell{text-align:right; font-family:var(--mono)}
 td:first-child input.cell{text-align:left; font-family:'Manrope'}
 input.cell:focus, select.cell:focus{outline:none; border-color:var(--accent); background:var(--raise)}
 input.cell::placeholder{color:var(--muted)}
-select.cell{cursor:pointer; -webkit-appearance:none; appearance:none; padding-right:7px}
-.w-name{min-width:150px} .w-tk{min-width:96px} .w-sm{width:86px} .w-dt{width:110px}
+select.cell{cursor:pointer; -webkit-appearance:none; appearance:none}
+.w-name{min-width:150px} .w-tk{min-width:96px} .w-sm{width:92px} .w-dt{width:110px} .w-xs{width:74px}
 .pill{display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700}
 .pill.buy{background:var(--up-bg); color:var(--up)} .pill.sell{background:var(--down-bg); color:var(--down)} .pill.hold{background:rgba(167,173,184,.14); color:var(--text-2)}
-.badge{display:inline-block; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:700; letter-spacing:.03em}
+.badge{display:inline-block; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:700}
 .badge.hit{background:var(--up-bg); color:var(--up)} .badge.miss{background:var(--down-bg); color:var(--down)} .badge.na{background:rgba(167,173,184,.12); color:var(--muted)}
 .del{cursor:pointer; color:var(--muted); font-weight:700; padding:2px 6px; border-radius:6px}
 .del:hover{color:var(--down); background:var(--down-bg)}
 .addbar{display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap}
-.chip{display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--text-2); background:var(--surface-2); padding:3px 9px; border-radius:20px}
-.chip i{width:9px;height:9px;border-radius:50%; display:inline-block}
 .small{font-size:11px;color:var(--muted)}
-.chartbox{position:relative; height:280px}
-.chartbox.sm{height:210px}
-.hide{display:none!important}
 .tag{font-size:10px; color:var(--muted); background:var(--surface-2); border:1px solid var(--border); padding:1px 6px; border-radius:5px; font-family:var(--mono)}
-.note{background:var(--accent-dim); border:1px solid rgba(233,162,59,.3); color:#f0c98a; padding:8px 12px; border-radius:9px; font-size:12px; margin-bottom:14px}
-/* modal */
-.modal{position:fixed; inset:0; background:rgba(4,6,10,.66); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px}
-.modal .box{background:var(--surface); border:1px solid var(--border-2); border-radius:14px; padding:18px; width:min(640px,94vw)}
-.modal h3{font-family:'Fraunces',serif; margin:0 0 2px; font-size:17px}
-.modal .x{float:right; cursor:pointer; color:var(--muted); font-size:20px; line-height:1}
-.lead-rank{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--surface-2);color:var(--text-2);margin-right:2px}
-.arow{cursor:pointer}
-.arow.sel{background:var(--accent-dim)!important}
+.chartbox{position:relative; height:260px}
+.modal{position:fixed; inset:0; background:rgba(4,6,10,.7); display:flex; align-items:center; justify-content:center; z-index:60; padding:20px}
+.modal .box{background:var(--surface); border:1px solid var(--border-2); border-radius:14px; padding:18px; width:min(720px,95vw); max-height:90vh; overflow:auto}
+.modal h3{font-family:'Fraunces',serif; margin:0 0 4px; font-size:17px}
+.modal .x{float:right; cursor:pointer; color:var(--muted); font-size:22px; line-height:1}
+.field{margin:12px 0}
+.field label{display:block; font-size:12px; color:var(--text-2); font-weight:600; margin-bottom:4px}
+.field input{width:100%; background:var(--surface-2); border:1px solid var(--border-2); color:var(--text); padding:8px 10px; border-radius:8px; font:inherit; font-size:13px}
+.note{background:var(--accent-dim); border:1px solid rgba(233,162,59,.3); color:#f0c98a; padding:8px 12px; border-radius:9px; font-size:12px; margin:10px 0}
+.hidden{display:none!important}
 .aname{display:inline-flex;align-items:center;gap:8px;font-weight:600}
 .aname i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border-2);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body data-palette="#3987e5,#199e70,#c98500,#008300,#9085e9,#e66767,#d55181,#d95926">
 <div class="app">
   <aside class="side">
-    <div class="brand">Research Portal<small>Calls · KPI</small></div>
+    <div class="brand">Research Portal<small>Calls by analyst</small></div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot" id="foot">loading…</div>
   </aside>
   <main class="main">
     <div class="topbar">
-      <div>
-        <h1 id="viewTitle">Overview</h1>
-        <div class="sub" id="viewSub"></div>
-      </div>
+      <div><h1 id="viewTitle">Analysts</h1><div class="sub" id="viewSub"></div></div>
       <div class="tb-actions">
-        <button class="btn ghost" id="btnReset" title="Discard local edits and reload the published book">Reset</button>
-        <button class="btn gold" id="btnExport" title="Download book.json to commit back to the repo">Export book.json</button>
+        <button class="btn ghost sm" id="btnSettings" title="API key & GitHub token">⚙ Settings</button>
+        <button class="btn ghost sm" id="btnReset" title="Discard local edits, reload published book">Reset</button>
+        <button class="btn sm" id="btnExport" title="Download book.json">Export</button>
+        <button class="btn gold sm" id="btnPublish" title="Commit book.json to the repo (needs token)">Publish</button>
       </div>
     </div>
     <div id="views"></div>
@@ -143,44 +135,51 @@ select.cell{cursor:pointer; -webkit-appearance:none; appearance:none; padding-ri
 
 <script>
 "use strict";
-const BENCH={IN:"^CRSLDX",TW:"^TWII",KR:"^KS11",US:"^GSPC",HK:"^HSI",JP:"^N225"};
-const BENCH_NAME={"^CRSLDX":"Nifty 500","^TWII":"TAIEX","^KS11":"KOSPI","^GSPC":"S&P 500","^HSI":"Hang Seng","^N225":"Nikkei 225"};
-const DEFAULT_BENCH="^GSPC";
-const MKT_CCY={IN:"INR",TW:"TWD",KR:"KRW",US:"USD",HK:"HKD",JP:"JPY"};
-const CUR_SYM={INR:"₹",TWD:"NT$",KRW:"₩",USD:"$",HKD:"HK$",JPY:"¥",EUR:"€",GBP:"£"};
-const SLOTS=["--s1","--s2","--s3","--s4","--s5","--s6","--s7","--s8"];
-const LS_KEY="grp-book-v1";
-const TABS=[["overview","Overview"],["holdings","Holdings"],["watchlist","Watchlist"],["calls","Calls"],["analysts","Analysts"]];
+/* ---------- ticker-suffix → benchmark / country / currency (mirrors scripts/*.py) ---------- */
+const SUFFIX_BENCH={".HK":"^HSI",".SS":"000300.SS",".SZ":"000300.SS",".NS":"^CRSLDX",".BO":"^BSESN",".TW":"^TWII",".TWO":"^TWII",".KS":"^KS11",".KQ":"^KS11",".SI":"^STI",".KL":"^KLSE",".BK":"^SET.BK",".JK":"^JKSE",".PS":"^PSI",".T":"^N225"};
+const SUFFIX_COUNTRY={".HK":"HK",".SS":"CN",".SZ":"CN",".NS":"IN",".BO":"IN",".TW":"TW",".TWO":"TW",".KS":"KR",".KQ":"KR",".SI":"ASEAN",".KL":"ASEAN",".BK":"ASEAN",".JK":"ASEAN",".PS":"ASEAN",".T":"JP"};
+const SUFFIX_CCY={".HK":"HKD",".SS":"CNY",".SZ":"CNY",".NS":"INR",".BO":"INR",".TW":"TWD",".TWO":"TWD",".KS":"KRW",".KQ":"KRW",".SI":"SGD",".KL":"MYR",".BK":"THB",".JK":"IDR",".PS":"PHP",".T":"JPY"};
+const BENCH_NAME={"^HSI":"Hang Seng","000300.SS":"CSI 300","^CRSLDX":"Nifty 500","^BSESN":"Sensex","^TWII":"TAIEX","^KS11":"KOSPI","^STI":"STI","^KLSE":"KLCI","^SET.BK":"SET","^JKSE":"JKSE","^PSI":"PSEi","^N225":"Nikkei","^GSPC":"S&P 500"};
+const CUR_SYM={INR:"₹",TWD:"NT$",KRW:"₩",USD:"$",HKD:"HK$",JPY:"¥",CNY:"¥",SGD:"S$",MYR:"RM",THB:"฿",IDR:"Rp",PHP:"₱"};
+const COUNTRIES=[["HK","Hong Kong"],["CN","China"],["IN","India"],["TW","Taiwan"],["KR","Korea"],["ASEAN","ASEAN"],["US","United States"],["JP","Japan"]];
+const REPO="aloyatclaude/mamreg";
+const LS_BOOK="grp-book-v2", LS_CLAUDE="grp-claude-key", LS_GH="grp-gh-token";
+const TABS=[["analysts","Analysts"],["holdings","Holdings"]];
+const ANALYST_COLORS=["#3987e5","#199e70","#c98500","#9085e9","#e66767","#d55181"];
+
+const sfx=t=>{const i=(t||"").lastIndexOf(".");return i>0?t.slice(i):"";};
+const benchFromTicker=t=>SUFFIX_BENCH[sfx(t)]||"^GSPC";
+const countryFromTicker=t=>SUFFIX_COUNTRY[sfx(t)]||"US";
+const ccyFromTicker=t=>SUFFIX_CCY[sfx(t)]||"USD";
 
 let BOOK=null, PRICES={quotes:{},closes:{},fx:{},generated:null}, SEED=null;
-let SORTED={};           // symbol -> sorted date keys
-let view="overview";
-let callSort={col:"entryDate",dir:-1};
-let selAnalyst=null;
+let SORTED={};
+let view="analysts", selAnalyst=null, section="calls";
 let charts={};
 
-/* ---------- data load ---------- */
+/* ---------- load / save ---------- */
 async function load(){
   const [bk,pr]=await Promise.all([
     fetch("data/book.json").then(r=>r.json()),
     fetch("data/prices.json").then(r=>r.ok?r.json():null).catch(()=>null)
   ]);
   SEED=bk;
-  const saved=localStorage.getItem(LS_KEY);
+  const saved=localStorage.getItem(LS_BOOK);
   BOOK=saved?JSON.parse(saved):structuredClone(bk);
+  if(!BOOK.holdings)BOOK.holdings=[]; if(!BOOK.calls)BOOK.calls=[]; if(!BOOK.analysts)BOOK.analysts=[];
   if(pr) PRICES=pr;
   SORTED={}; for(const s in PRICES.closes) SORTED[s]=Object.keys(PRICES.closes[s]).sort();
-  const h=(location.hash||"").slice(1); if(TABS.some(t=>t[0]===h)) view=h;
+  parseHash();
+  if(!selAnalyst&&BOOK.analysts[0]) selAnalyst=BOOK.analysts[0].id;
   buildNav(); render();
   const gen=PRICES.generated?new Date(PRICES.generated):null;
-  document.getElementById("foot").innerHTML=
-    `Prices: Yahoo, indicative<br>${gen?("refreshed "+gen.toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})):"no price feed"}<br><span class="small">returns from adjusted closes</span>`;
+  document.getElementById("foot").innerHTML=`Prices: Yahoo, indicative<br>${gen?("refreshed "+gen.toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})):"no price feed"}<br><span class="small">returns from adjusted closes</span>`;
+  if(new URLSearchParams(location.search).has("pdftest")) setTimeout(()=>reviewHoldings(parseHoldingsText(SAMPLE_STMT),"self-test sample"),300);
 }
-function save(){BOOK.updated=new Date().toISOString().slice(0,10); localStorage.setItem(LS_KEY,JSON.stringify(BOOK));}
+function save(){BOOK.updated=new Date().toISOString().slice(0,10); localStorage.setItem(LS_BOOK,JSON.stringify(BOOK));}
 
-/* ---------- price helpers (mirror verify_calls.py) ---------- */
-function benchOf(m){return BENCH[m]||DEFAULT_BENCH;}
-function oob(sym,target){           // value at latest date <= target
+/* ---------- price helpers (identical logic to scripts/verify_calls.py) ---------- */
+function oob(sym,target){
   const ks=SORTED[sym]; if(!ks||!ks.length||!target) return null;
   let lo=0,hi=ks.length-1,res=null;
   while(lo<=hi){const m=(lo+hi)>>1; if(ks[m]<=target){res=m;lo=m+1;}else hi=m-1;}
@@ -189,12 +188,8 @@ function oob(sym,target){           // value at latest date <= target
 function lastClose(sym){const ks=SORTED[sym]; return (ks&&ks.length)?PRICES.closes[sym][ks[ks.length-1]]:null;}
 function quote(sym){return PRICES.quotes[sym]||null;}
 function livePrice(sym){const q=quote(sym); return q&&q.price!=null?q.price:lastClose(sym);}
-function fxRate(ccy){if(ccy==="USD")return 1; const r=PRICES.fx["USD"+ccy]; return r||null;}
-function toUSD(amt,ccy){const r=fxRate(ccy); return r?amt/r:null;}
-
-/* ---------- call scoring (identical logic to scripts/verify_calls.py) ---------- */
 function scoreCall(c){
-  const b=benchOf(c.market), tk=c.ticker;
+  const b=benchFromTicker(c.ticker), tk=c.ticker;
   const eP=oob(tk,c.entryDate);
   const xP=c.exitDate?oob(tk,c.exitDate):livePrice(tk);
   const be=oob(b,c.entryDate);
@@ -211,345 +206,313 @@ function scoreCall(c){
   }
   return {entryPx:eP,exitPx:xP,benchmark:b,stockRet,benchRet,alpha,result,open:!c.exitDate};
 }
-function analystStats(){
-  const map={};
-  (BOOK.analysts||[]).forEach((a,i)=>map[a.id]={id:a.id,name:a.name,idx:i,calls:[],rets:[],alphas:[],hits:0,scored:0});
-  (BOOK.calls||[]).forEach(c=>{
-    let a=map[c.analyst]; if(!a){a=map[c.analyst]={id:c.analyst,name:c.analyst||"—",idx:Object.keys(map).length,calls:[],rets:[],alphas:[],hits:0,scored:0};}
-    const s=scoreCall(c); a.calls.push({c,s});
-    if(s.stockRet!=null) a.rets.push(s.stockRet);
-    if(s.alpha!=null) a.alphas.push(s.alpha);
-    if(s.result==="HIT"||s.result==="MISS"){a.scored++; if(s.result==="HIT")a.hits++;}
-  });
-  const rows=Object.values(map).map(a=>{
-    const mean=arr=>arr.length?arr.reduce((x,y)=>x+y,0)/arr.length:null;
-    const stocks=new Set(a.calls.map(k=>k.c.ticker)).size;
-    return {...a, nStocks:stocks, hitPct:a.scored?a.hits/a.scored:null,
-      avgRet:mean(a.rets), avgAlpha:mean(a.alphas), nOpen:a.calls.filter(k=>k.s.open).length};
-  });
-  rows.sort((x,y)=>(y.avgAlpha??-9)-(x.avgAlpha??-9));
-  return rows;
+function analystSummary(id){
+  const calls=(BOOK.calls||[]).filter(c=>c.analyst===id).map(c=>({c,s:scoreCall(c)}));
+  const scored=calls.filter(x=>x.s.result==="HIT"||x.s.result==="MISS");
+  const hits=scored.filter(x=>x.s.result==="HIT").length;
+  const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  return {calls, open:calls.filter(x=>x.s.open), closed:calls.filter(x=>!x.s.open),
+    nNames:new Set(calls.map(x=>x.c.ticker)).size,
+    scored:scored.length, hits, hitPct:scored.length?hits/scored.length:null,
+    avgRet:mean(calls.map(x=>x.s.stockRet).filter(v=>v!=null)),
+    avgAlpha:mean(calls.map(x=>x.s.alpha).filter(v=>v!=null))};
 }
-function analystColor(idx){return getComputedStyle(document.documentElement).getPropertyValue(SLOTS[idx%8]).trim();}
 
 /* ---------- formatting ---------- */
-const nf=(v,d=2)=>v==null||isNaN(v)?"–":Number(v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
-function pctSpan(v,dp=2){ if(v==null||isNaN(v)) return '<span class="flat">–</span>';
-  const p=v*100, c=p>0.0001?"up":(p<-0.0001?"down":"flat"), s=p>0?"+":"";
-  return `<span class="${c}">${s}${p.toFixed(dp)}%</span>`; }
-function pctSpanRaw(p,dp=2){ if(p==null||isNaN(p)) return '<span class="flat">–</span>';
-  const c=p>0.0001?"up":(p<-0.0001?"down":"flat"), s=p>0?"+":"";
-  return `<span class="${c}">${s}${p.toFixed(dp)}%</span>`; }
-function money(v,ccy){ if(v==null||isNaN(v)) return "–"; return (CUR_SYM[ccy]||"")+Number(v).toLocaleString(undefined,{maximumFractionDigits:2}); }
-function capUSD(sym,ccy){const q=quote(sym); if(!q||q.mktcap_native==null) return "–"; const u=toUSD(q.mktcap_native,ccy); if(u==null) return "–";
-  return "$"+(u>=1e9?(u/1e9).toFixed(2)+"B":(u/1e6).toFixed(0)+"M"); }
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const nf=(v,d=2)=>v==null||isNaN(v)?"–":Number(v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+function pctSpan(v,dp=2){ if(v==null||isNaN(v)) return '<span class="flat">–</span>'; const p=v*100; return pctSpanRaw(p,dp); }
+function pctSpanRaw(p,dp=2){ if(p==null||isNaN(p)) return '<span class="flat">–</span>'; const c=p>0.0001?"up":(p<-0.0001?"down":"flat"),s=p>0?"+":""; return `<span class="${c}">${s}${p.toFixed(dp)}%</span>`; }
+function money(v,ccy){ if(v==null||isNaN(v)) return "–"; return (CUR_SYM[ccy]||"")+Number(v).toLocaleString(undefined,{maximumFractionDigits:2}); }
+function analystColor(id){const i=(BOOK.analysts||[]).findIndex(a=>a.id===id); return ANALYST_COLORS[(i<0?0:i)%ANALYST_COLORS.length];}
+function analystName(id){const a=(BOOK.analysts||[]).find(x=>x.id===id); return a?a.name:(id||"—");}
 
-/* ---------- nav / shell ---------- */
+/* ---------- shell / routing ---------- */
 function buildNav(){
-  document.getElementById("nav").innerHTML=TABS.map(([id,label])=>
-    `<div class="nav-item ${id===view?"active":""}" data-view="${id}"><span class="dot"></span>${label}</div>`).join("");
-  document.querySelectorAll(".nav-item").forEach(n=>n.onclick=()=>{setView(n.dataset.view);});
+  document.getElementById("nav").innerHTML=TABS.map(([id,label])=>`<div class="nav-item ${id===view?"active":""}" data-view="${id}"><span class="dot"></span>${label}</div>`).join("");
+  document.querySelectorAll(".nav-item").forEach(n=>n.onclick=()=>{view=n.dataset.view; syncHash(); buildNav(); render();});
 }
-function setView(id){view=id; selAnalyst=null; try{history.replaceState(null,"","#"+id);}catch(e){} buildNav(); render();}
-window.addEventListener("hashchange",()=>{const h=(location.hash||"").slice(1); if(TABS.some(t=>t[0]===h)&&h!==view) setView(h);});
-const SUB={overview:"Portfolio & analyst snapshot",holdings:"Live positions · prices via Yahoo (indicative)",
-  watchlist:"Names we follow",calls:"Every Buy/Sell/Hold call · open on top, closed below",
-  analysts:"Track record by analyst · Buy/Sell scored on benchmark-relative alpha, Hold excluded"};
+function parseHash(){
+  const parts=(location.hash||"").replace(/^#/,"").split("/").filter(Boolean);
+  if(parts[0]&&TABS.some(t=>t[0]===parts[0])) view=parts[0];
+  if(view==="analysts"){ if(parts[1]) selAnalyst=parts[1]; if(parts[2]&&["calls","historical","coverage"].includes(parts[2])) section=parts[2]; }
+}
+function syncHash(){ let h="#"+view; if(view==="analysts") h+="/"+(selAnalyst||"")+"/"+section; try{history.replaceState(null,"",h);}catch(e){} }
+window.addEventListener("hashchange",()=>{const before=view+selAnalyst+section; parseHash(); if(view+selAnalyst+section!==before){buildNav();render();}});
+const SUB={analysts:"Record & grade calls by analyst — return, vs-benchmark and hit rate",holdings:"Positions by country — cost and day/week/month/YTD returns"};
 function render(){
   document.getElementById("viewTitle").textContent=TABS.find(t=>t[0]===view)[1];
   document.getElementById("viewSub").textContent=SUB[view]||"";
   Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}}); charts={};
   const v=document.getElementById("views");
-  if(view==="overview") v.innerHTML=renderOverview();
-  else if(view==="holdings") v.innerHTML=renderHoldings();
-  else if(view==="watchlist") v.innerHTML=renderWatchlist();
-  else if(view==="calls") v.innerHTML=renderCalls();
-  else if(view==="analysts") v.innerHTML=renderAnalysts();
+  v.innerHTML = view==="holdings" ? renderHoldings() : renderAnalysts();
   wire();
-  if(view==="overview") drawOverviewChart();
-  if(view==="analysts") drawAnalystCharts();
 }
-
-/* ---------- OVERVIEW ---------- */
-function portfolioTotals(){
-  let usd=0, day=0, known=false;
-  (BOOK.holdings||[]).forEach(h=>{
-    const ccy=h.currency||MKT_CCY[h.market]||"USD", px=livePrice(h.ticker);
-    if(px==null||!h.qty) return; known=true;
-    const valUSD=toUSD(px*h.qty,ccy); if(valUSD==null) return;
-    usd+=valUSD;
-    const q=quote(h.ticker); if(q&&q.d1!=null) day+=valUSD*(q.d1/100)/(1+q.d1/100);
-  });
-  return {usd:known?usd:null, dayUSD:known?day:null};
-}
-function renderOverview(){
-  const t=portfolioTotals(), A=analystStats();
-  const calls=BOOK.calls||[];
-  const scored=calls.map(scoreCall).filter(s=>s.result==="HIT"||s.result==="MISS");
-  const hits=scored.filter(s=>s.result==="HIT").length;
-  const best=[...calls.map(c=>({c,s:scoreCall(c)}))].filter(x=>x.s.alpha!=null).sort((a,b)=>b.s.alpha-a.s.alpha);
-  const bestC=best[0], worstC=best[best.length-1];
-  const tiles=[
-    ["Portfolio value", t.usd!=null?("$"+ (t.usd/1e6).toFixed(2)+"M"):"–", ""],
-    ["Day P&L", t.dayUSD!=null?pctSpanRaw(t.usd?100*t.dayUSD/t.usd:null):"–", "vs prior close"],
-    ["Positions", (BOOK.holdings||[]).length, ""],
-    ["Calls logged", calls.length, `${calls.filter(c=>!c.exitDate).length} open`],
-    ["Call hit rate", scored.length?Math.round(100*hits/scored.length)+"%":"–", `${hits}/${scored.length} scored`],
-    ["Analysts", A.length, ""],
-  ];
-  return `
-  <div class="grid tiles">${tiles.map(t=>`<div class="tile"><div class="k">${t[0]}</div><div class="v">${t[1]}</div><div class="small">${t[2]}</div></div>`).join("")}</div>
-  <div class="two-col">
-    <div class="panel"><h2>Analyst leaderboard</h2><div class="desc">Ranked by average benchmark-relative alpha across their calls.</div>
-      <div class="tw"><table><thead><tr><th>Analyst</th><th class="num">Calls</th><th class="num">Hit rate</th><th class="num">Avg return</th><th class="num">Avg alpha</th></tr></thead>
-      <tbody>${A.map(a=>`<tr><td><span class="aname"><i style="background:${analystColor(a.idx)}"></i>${esc(a.name)}</span></td>
-        <td class="num">${a.calls.length}</td><td class="num">${a.hitPct==null?"–":Math.round(a.hitPct*100)+"%"}${a.scored<5?' <span class="tag">n&lt;5</span>':""}</td>
-        <td class="num">${pctSpan(a.avgRet)}</td><td class="num">${pctSpan(a.avgAlpha)}</td></tr>`).join("")}</tbody></table></div>
-    </div>
-    <div class="panel"><h2>Cumulative alpha</h2><div class="desc">Running average alpha as each analyst's calls are made.</div>
-      <div class="chartbox sm"><canvas id="ovChart"></canvas></div>
-    </div>
-  </div>
-  <div class="two-col">
-    <div class="panel"><h2>Best call</h2>${bestC?callMini(bestC):'<div class="small">—</div>'}</div>
-    <div class="panel"><h2>Worst call</h2>${worstC?callMini(worstC):'<div class="small">—</div>'}</div>
-  </div>`;
-}
-function callMini(x){const c=x.c,s=x.s;const an=(BOOK.analysts||[]).find(a=>a.id===c.analyst);
-  return `<div style="display:flex;justify-content:space-between;align-items:baseline"><div><span class="name">${esc(c.name)}</span> <span class="pill ${(c.call||"").toLowerCase()}">${esc(c.call)}</span><div class="small">${esc(an?an.name:c.analyst)} · entered ${esc(c.entryDate||"—")}</div></div>
-  <div style="text-align:right"><div style="font-size:20px;font-weight:600" class="num">${pctSpan(s.alpha)}</div><div class="small">alpha · stock ${pctSpan(s.stockRet)}</div></div></div>`;
-}
-
-/* ---------- HOLDINGS ---------- */
-function renderHoldings(){
-  const H=BOOK.holdings||[];
-  let rows=H.map(h=>{
-    const ccy=h.currency||MKT_CCY[h.market]||"USD", px=livePrice(h.ticker), q=quote(h.ticker);
-    const ret= (px!=null&&h.entry)? px/h.entry-1 : null;
-    const valUSD=(px!=null&&h.qty)?toUSD(px*h.qty,ccy):null;
-    return {h,ccy,px,q,ret,valUSD};
-  });
-  const totUSD=rows.reduce((s,r)=>s+(r.valUSD||0),0);
-  const body=rows.map(r=>{const h=r.h,q=r.q||{};
-    const w= (totUSD&&r.valUSD)? r.valUSD/totUSD : null;
-    return `<tr data-id="${h.id}" data-coll="holdings">
-      <td><span class="name link" data-chart="${esc(h.ticker)}" data-nm="${esc(h.name)}">${esc(h.name)}</span><span class="tk">${esc(h.ticker)}</span></td>
-      <td><input class="cell w-sm" data-f="qty" type="number" value="${h.qty??""}"></td>
-      <td class="num">${w==null?"–":(w*100).toFixed(2)+"%"}</td>
-      <td><input class="cell w-sm" data-f="entry" type="number" value="${h.entry??""}"></td>
-      <td><input class="cell w-dt" data-f="entryDate" type="date" value="${esc(h.entryDate||"")}"></td>
-      <td class="num">${money(r.px,r.ccy)}</td>
-      <td class="num">${capUSD(h.ticker,r.ccy)}</td>
-      <td class="num">${pctSpanRaw(q.d1)}</td>
-      <td class="num">${pctSpanRaw(q.w1)}</td>
-      <td class="num">${pctSpanRaw(q.m1)}</td>
-      <td class="num">${pctSpanRaw(q.ytd)}</td>
-      <td class="num">${r.ret==null?"–":pctSpan(r.ret)}</td>
-      <td><span class="del" data-del>✕</span></td></tr>`;}).join("");
-  return `<div class="panel"><h2>Current Holdings</h2><div class="desc">Return is vs your cost basis (entry price). Weight by current market value in USD. Live price &amp; 1D/1W/1M/YTD from the price feed.</div>
-    <div class="tw"><table><thead><tr><th>Stock</th><th class="num">Qty</th><th class="num">Weight</th><th class="num">Entry</th><th>Entry date</th><th class="num">LTP</th><th class="num">Mkt cap</th><th class="num">1D</th><th class="num">1W</th><th class="num">1M</th><th class="num">YTD</th><th class="num">Return</th><th></th></tr></thead>
-    <tbody>${body||emptyRow(13)}</tbody>
-    <tfoot><tr><td>Total</td><td></td><td class="num">100%</td><td colspan="3"></td><td class="num" colspan="6" style="text-align:left;color:var(--muted)">Portfolio value ${totUSD?("$"+(totUSD/1e6).toFixed(2)+"M"):"–"}</td><td></td></tr></tfoot></table></div>
-    <div class="addbar"><button class="btn" data-add="holdings">+ Add holding</button><span class="small">Prices indicative, delayed.</span></div></div>`;
-}
-
-/* ---------- WATCHLIST ---------- */
-function renderWatchlist(){
-  const W=BOOK.watchlist||[];
-  const body=W.map(w=>{const ccy=w.currency||MKT_CCY[w.market]||"USD", px=livePrice(w.ticker), q=quote(w.ticker)||{};
-    const up=(px!=null&&w.target)? w.target/px-1 : null;
-    return `<tr data-id="${w.id}" data-coll="watchlist">
-      <td><span class="name link" data-chart="${esc(w.ticker)}" data-nm="${esc(w.name)}">${esc(w.name||"")}</span></td>
-      <td><input class="cell w-tk" data-f="ticker" value="${esc(w.ticker||"")}"></td>
-      <td>${marketSelect(w.market,"market")}</td>
-      <td>${stanceSelect(w.stance)}</td>
-      <td><input class="cell w-sm" data-f="target" type="number" value="${w.target??""}"></td>
-      <td class="num">${money(px,ccy)}</td>
-      <td class="num">${up==null?"–":pctSpan(up)}</td>
-      <td class="num">${pctSpanRaw(q.w1)}</td>
-      <td class="num">${pctSpanRaw(q.ytd)}</td>
-      <td><input class="cell w-name" data-f="source" value="${esc(w.source||"")}" placeholder="source / note"></td>
-      <td><span class="del" data-del>✕</span></td></tr>`;}).join("");
-  return `<div class="panel"><h2>Watchlist</h2><div class="desc">Names we follow but don't hold. Upside = target ÷ live price − 1.</div>
-    <div class="tw"><table><thead><tr><th>Name</th><th>Ticker</th><th>Market</th><th>Stance</th><th class="num">Target</th><th class="num">Price</th><th class="num">Upside</th><th class="num">1W</th><th class="num">YTD</th><th>Source</th><th></th></tr></thead>
-    <tbody>${body||emptyRow(11,"No watchlist names yet.")}</tbody></table></div>
-    <div class="addbar"><button class="btn" data-add="watchlist">+ Add name</button></div></div>`;
-}
-
-/* ---------- CALLS ---------- */
-function renderCalls(){
-  const rows=(BOOK.calls||[]).map(c=>({c,s:scoreCall(c)}));
-  const dir=callSort.dir, col=callSort.col;
-  const val=x=>{const c=x.c,s=x.s; switch(col){
-    case "name":return c.name||""; case "analyst":return analystName(c.analyst);
-    case "call":return c.call||""; case "entryDate":return c.entryDate||"";
-    case "stock":return s.stockRet??-99; case "bench":return s.benchRet??-99; case "alpha":return s.alpha??-99;
-    default:return c.entryDate||"";}};
-  rows.sort((a,b)=>{const va=val(a),vb=val(b); const cmp=(typeof va==="string")?va.localeCompare(vb):(va-vb); return cmp*dir;});
-  const open=rows.filter(r=>r.s.open), closed=rows.filter(r=>!r.s.open);
-  const H=[["analyst","Analyst",0],["name","Stock",0],["call","Call",0],["entry","Entry",1],["entryDate","Entry date",0],["exit","Exit",1],["exitDate","Exit date",0],["stock","Total Return",1],["bench","Benchmark",1],["alpha","Rel Outperf",1],["result","",1]];
-  const head=H.map(h=>`<th class="${h[2]?"num ":""}${["name","analyst","call","entryDate","stock","bench","alpha"].includes(h[0])?"sortable":""}" data-sort="${h[0]}">${h[1]}${col===h[0]?` <span class="arr">${dir>0?"▲":"▼"}</span>`:""}</th>`).join("")+"<th></th>";
-  const rowHtml=x=>{const c=x.c,s=x.s;
-    return `<tr data-id="${c.id}" data-coll="calls">
-      <td>${analystSelect(c.analyst)}</td>
-      <td><span class="name link" data-chart="${esc(c.ticker)}" data-nm="${esc(c.name)}">${esc(c.name||"")}</span><span class="tk">${esc(c.ticker)}</span></td>
-      <td>${callSelect(c.call)}</td>
-      <td class="num">${s.entryPx!=null?nf(s.entryPx):(c.entry!=null?nf(c.entry):"–")}</td>
-      <td><input class="cell w-dt" data-f="entryDate" type="date" value="${esc(c.entryDate||"")}"></td>
-      <td class="num">${s.open?'<span class="flat">open</span>':(s.exitPx!=null?nf(s.exitPx):"–")}</td>
-      <td><input class="cell w-dt" data-f="exitDate" type="date" value="${esc(c.exitDate||"")}"></td>
-      <td class="num">${pctSpan(s.stockRet)}</td>
-      <td class="num">${pctSpan(s.benchRet)}</td>
-      <td class="num">${pctSpan(s.alpha)}</td>
-      <td class="num">${resultBadge(s.result)}</td>
-      <td><span class="del" data-del>✕</span></td></tr>`;};
-  const grp=(label,arr)=>arr.length?`<tr class="grp-head"><td colspan="12">${label} · ${arr.length}</td></tr>`+arr.map(rowHtml).join(""):"";
-  return `<div class="panel"><h2>Historical Trades / Calls</h2><div class="desc">Return uses adjusted closes on the call &amp; exit dates (not the typed entry price) so timing is graded fairly. Alpha = stock − benchmark over the same dates. Hit/miss keyed on alpha; Hold excluded.</div>
-    <div class="tw"><table><thead><tr>${head}</tr></thead>
-    <tbody>${grp("OPEN",open)}${grp("CLOSED",closed)}${rows.length?"":emptyRow(12,"No calls yet.")}</tbody></table></div>
-    <div class="addbar"><button class="btn" data-add="calls">+ Add trade</button>
-      <span class="small">Entry/Exit prices shown are the market close on those dates.</span></div></div>`;
-}
-function resultBadge(r){ if(r==="HIT")return '<span class="badge hit">HIT</span>'; if(r==="MISS")return '<span class="badge miss">MISS</span>';
-  if(r==="hold")return '<span class="badge na">HOLD</span>'; return '<span class="badge na">–</span>'; }
 
 /* ---------- ANALYSTS ---------- */
 function renderAnalysts(){
-  const A=analystStats();
-  if(!selAnalyst&&A.length) selAnalyst=A[0].id;
-  const rows=A.map(a=>`<tr class="arow ${a.id===selAnalyst?"sel":""}" data-pick="${a.id}">
-    <td><span class="lead-rank">${A.indexOf(a)+1}</span><span class="aname"><i style="background:${analystColor(a.idx)}"></i>${esc(a.name)}</span></td>
-    <td class="num">${a.calls.length}</td><td class="num">${a.nOpen}</td><td class="num">${a.nStocks}</td>
-    <td class="num">${a.hitPct==null?"–":Math.round(a.hitPct*100)+"%"}${a.scored<5?' <span class="tag">n&lt;5</span>':""}</td>
-    <td class="num">${pctSpan(a.avgRet)}</td><td class="num">${pctSpan(a.avgAlpha)}</td></tr>`).join("");
-  const lead=`<div class="panel"><h2>Leaderboard</h2><div class="desc">Ranked by average alpha. Small samples (n&lt;5 scored) flagged — don't over-read them. Click a row to drill in.</div>
-    <div class="tw"><table><thead><tr><th>Analyst</th><th class="num">Calls</th><th class="num">Open</th><th class="num">Stocks</th><th class="num">Hit rate</th><th class="num">Avg return</th><th class="num">Avg alpha</th></tr></thead>
-    <tbody>${rows||emptyRow(7,"No analysts yet.")}</tbody></table></div></div>`;
-  const chart=`<div class="panel"><h2>Average alpha by analyst</h2><div class="desc">Benchmark-relative edge per analyst (green = adds alpha).</div><div class="chartbox sm"><canvas id="barChart"></canvas></div></div>`;
-  const sel=A.find(a=>a.id===selAnalyst);
-  const detail=sel?renderAnalystDetail(sel):"";
-  return `<div class="two-col">${lead}${chart}</div>${detail}`;
+  const analysts=BOOK.analysts||[];
+  if(!selAnalyst&&analysts[0]) selAnalyst=analysts[0].id;
+  const tabs=`<div class="seg">${analysts.map(a=>`<button class="${a.id===selAnalyst?"on":""}" data-analyst="${a.id}">${esc(a.name)}</button>`).join("")}<button data-analyst="__new" title="Add analyst">＋</button></div>`;
+  const sum=analystSummary(selAnalyst);
+  const tiles=`<div class="grid tiles">
+    <div class="tile"><div class="k">Overall return</div><div class="v">${pctSpan(sum.avgRet)}</div><div class="small">avg per call</div></div>
+    <div class="tile"><div class="k">Hit rate</div><div class="v">${sum.hitPct==null?"–":Math.round(sum.hitPct*100)+"%"}</div><div class="small">${sum.hits}/${sum.scored} scored${sum.scored<5?" · small sample":""}</div></div>
+    <div class="tile"><div class="k">Return vs benchmark</div><div class="v">${pctSpan(sum.avgAlpha)}</div><div class="small">avg alpha per call</div></div>
+    <div class="tile"><div class="k">Calls</div><div class="v">${sum.calls.length} <small>${sum.open.length} open · ${sum.closed.length} closed</small></div><div class="small">${sum.nNames} names</div></div>
+  </div>`;
+  const segs=`<div class="seg small">${[["calls","Calls"],["historical","Historical Trades"],["coverage","Coverage List"]].map(s=>`<button class="${s[0]===section?"on":""}" data-section="${s[0]}">${s[1]}</button>`).join("")}</div>`;
+  let body="";
+  if(section==="calls") body=callsTable(sum.open,true);
+  else if(section==="historical") body=callsTable(sum.closed,false);
+  else body=coverageTable(sum);
+  return tabs+tiles+`<div class="panel">${segs}${body}</div>`;
 }
-function renderAnalystDetail(a){
-  const byType={Buy:[],Sell:[],Hold:[]};
-  a.calls.forEach(k=>{const t=(k.c.call||"").replace(/^\w/,m=>m.toUpperCase()); (byType[t]||(byType[t]=[])).push(k);});
-  const typeRow=Object.entries(byType).filter(([,v])=>v.length).map(([t,v])=>{
-    const al=v.map(k=>k.s.alpha).filter(x=>x!=null); const m=al.length?al.reduce((x,y)=>x+y,0)/al.length:null;
-    return `<div class="chip"><b>${t}</b> ${v.length} · avg α ${al.length?pctSpan(m):"–"}</div>`;}).join("");
-  const callsTbl=a.calls.slice().sort((x,y)=>(y.c.entryDate||"").localeCompare(x.c.entryDate||"")).map(k=>{const c=k.c,s=k.s;
-    return `<tr><td><span class="name">${esc(c.name)}</span><span class="tk">${esc(c.ticker)}</span></td>
-      <td><span class="pill ${(c.call||"").toLowerCase()}">${esc(c.call)}</span></td>
-      <td class="num">${esc(c.entryDate||"—")}</td><td class="num">${s.open?'<span class="flat">open</span>':esc(c.exitDate)}</td>
-      <td class="num">${pctSpan(s.stockRet)}</td><td class="num">${pctSpan(s.benchRet)}</td><td class="num">${pctSpan(s.alpha)}</td>
-      <td class="num">${resultBadge(s.result)}</td></tr>`;}).join("");
-  return `<div class="panel"><h2><span class="aname"><i style="background:${analystColor(a.idx)}"></i>${esc(a.name)}</span> — track record</h2>
-    <div class="desc">${a.calls.length} calls · ${a.nStocks} stocks · hit rate ${a.hitPct==null?"–":Math.round(a.hitPct*100)+"%"} (${a.hits}/${a.scored}) · avg alpha ${pctSpan(a.avgAlpha)}</div>
-    <div class="addbar" style="margin:0 0 12px">${typeRow}</div>
-    <div class="two-col" style="margin-bottom:0">
-      <div class="tw"><table><thead><tr><th>Stock</th><th>Call</th><th class="num">Entry</th><th class="num">Exit</th><th class="num">Stock</th><th class="num">Bmk</th><th class="num">Alpha</th><th></th></tr></thead><tbody>${callsTbl}</tbody></table></div>
-      <div class="chartbox sm"><canvas id="anChart"></canvas></div>
-    </div></div>`;
+function callRow(x,openMode){
+  const c=x.c,s=x.s;
+  return `<tr data-id="${c.id}" data-coll="calls">
+    ${stockCell(c)}
+    <td>${callSelect(c.call)}</td>
+    <td class="num">${s.entryPx!=null?nf(s.entryPx):"–"}</td>
+    <td><input class="cell w-dt" data-f="entryDate" type="date" value="${esc(c.entryDate||"")}"></td>
+    <td class="num">${s.open?'<span class="flat">—</span>':(s.exitPx!=null?nf(s.exitPx):"–")}</td>
+    <td><input class="cell w-dt" data-f="exitDate" type="date" value="${esc(c.exitDate||"")}"></td>
+    <td class="num">${pctSpan(s.stockRet)}</td>
+    <td class="num">${pctSpan(s.benchRet)}</td>
+    <td class="num">${pctSpan(s.alpha)}</td>
+    <td class="num">${resultBadge(s.result,s.open)}</td>
+    <td><span class="del" data-del>✕</span></td></tr>`;
 }
+function callsTable(rows,openMode){
+  const bench=rows[0]?BENCH_NAME[rows[0].s.benchmark]||"Index":"Index";
+  const scored=rows.filter(x=>x.s.result==="HIT"||x.s.result==="MISS");
+  const hits=scored.filter(x=>x.s.result==="HIT").length;
+  const mean=a=>a.length?a.reduce((p,q)=>p+q,0)/a.length:null;
+  const avgR=mean(rows.map(x=>x.s.stockRet).filter(v=>v!=null));
+  const avgA=mean(rows.map(x=>x.s.alpha).filter(v=>v!=null));
+  const avgB=mean(rows.map(x=>x.s.benchRet).filter(v=>v!=null));
+  const head=`<tr><th>Stock</th><th>Call</th><th class="num">Entry</th><th>Entry date</th><th class="num">Exit</th><th>Exit date</th><th class="num">Return</th><th class="num">vs Index</th><th class="num">+/−</th><th class="num">Result</th><th></th></tr>`;
+  const foot=rows.length?`<tr class="subtotal"><td>${openMode?"Open":"Realized"} · ${rows.length}</td><td colspan="5">Hit rate ${scored.length?Math.round(100*hits/scored.length)+"% ("+hits+"/"+scored.length+")":"–"}</td><td class="num">${pctSpan(avgR)}</td><td class="num">${pctSpan(avgB)}</td><td class="num">${pctSpan(avgA)}</td><td colspan="2"></td></tr>`:"";
+  const desc=`<div class="desc">${openMode?"Open calls, marked-to-market.":"Closed calls, realized."} Return = stock; vs Index = ${esc(bench)} over the same dates; +/− = alpha. Hit/miss on alpha (Hold excluded).</div>`;
+  const body=rows.length?rows.map(x=>callRow(x,openMode)).join(""):emptyRow(11,openMode?"No open calls.":"No closed trades yet.");
+  return desc+`<div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody>${foot?`<tfoot>${foot}</tfoot>`:""}</table></div>`+
+    (openMode?`<div class="addbar"><button class="btn sm" data-addcall>+ Add call</button><span class="small">New call is attributed to ${esc(analystName(selAnalyst))}. Set an exit date to move it to Historical Trades.</span></div>`:"");
+}
+function coverageTable(sum){
+  const byTk={};
+  sum.calls.forEach(x=>{const k=x.c.ticker;(byTk[k]||(byTk[k]={name:x.c.name,ticker:k,items:[]})).items.push(x);});
+  const rows=Object.values(byTk).map(g=>{
+    const latest=g.items.slice().sort((a,b)=>(b.c.entryDate||"").localeCompare(a.c.entryDate||""))[0];
+    const scored=g.items.filter(x=>x.s.result==="HIT"||x.s.result==="MISS");
+    const hits=scored.filter(x=>x.s.result==="HIT").length;
+    return `<tr><td><span class="name link" data-chart="${esc(g.ticker)}" data-nm="${esc(g.name)}">${esc(g.name)}</span><span class="tk">${esc(g.ticker)}</span></td>
+      <td><span class="pill ${(latest.c.call||"").toLowerCase()}">${esc(latest.c.call)}</span></td>
+      <td class="num">${money(livePrice(g.ticker),ccyFromTicker(g.ticker))}</td>
+      <td class="num">${g.items.length}</td>
+      <td class="num">${pctSpan(latest.s.alpha)}</td>
+      <td class="num">${scored.length?Math.round(100*hits/scored.length)+"%":"–"}</td></tr>`;
+  }).join("");
+  return `<div class="desc">Distinct names ${esc(analystName(selAnalyst))} covers — latest stance, price, calls made and hit rate.</div>
+    <div class="tw"><table><thead><tr><th>Stock</th><th>Latest</th><th class="num">Price</th><th class="num">Calls</th><th class="num">Latest α</th><th class="num">Hit rate</th></tr></thead>
+    <tbody>${rows||emptyRow(6,"No coverage yet.")}</tbody></table></div>`;
+}
+function stockCell(o){
+  return `<td><input class="cell w-name" data-f="name" value="${esc(o.name||"")}" placeholder="Company">
+    <div style="display:flex;gap:5px;align-items:center;margin-top:3px"><input class="cell w-tk" data-f="ticker" value="${esc(o.ticker||"")}" placeholder="TICKER.XX">${o.ticker?`<span class="link" data-chart="${esc(o.ticker)}" data-nm="${esc(o.name)}" title="price chart">📈</span>`:""}</div></td>`;
+}
+function resultBadge(r,open){ if(r==="HIT")return `<span class="badge hit">HIT${open?"*":""}</span>`; if(r==="MISS")return `<span class="badge miss">MISS${open?"*":""}</span>`; if(r==="hold")return '<span class="badge na">HOLD</span>'; return '<span class="badge na">–</span>'; }
+function callSelect(v){return `<select class="cell w-xs" data-f="call">`+["Buy","Sell","Hold"].map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")+"</select>";}
 
-/* ---------- selects & helpers ---------- */
-function analystName(id){const a=(BOOK.analysts||[]).find(x=>x.id===id); return a?a.name:(id||"");}
-function analystSelect(v){const opts=(BOOK.analysts||[]).map(a=>`<option value="${esc(a.id)}" ${a.id===v?"selected":""}>${esc(a.name)}</option>`).join("");
-  return `<select class="cell" data-f="analyst">${opts}<option value="__new">+ new analyst…</option></select>`;}
-function callSelect(v){return ["Buy","Sell","Hold"].map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")
-  .replace(/^/,'<select class="cell w-sm" data-f="call">')+"</select>";}
-function stanceSelect(v){return `<select class="cell w-sm" data-f="stance">`+["Buy","Add","Hold","Reduce","Sell","—"].map(o=>`<option ${o===(v||"—")?"selected":""}>${o}</option>`).join("")+"</select>";}
-function marketSelect(v,f){return `<select class="cell w-sm" data-f="${f}">`+Object.keys(BENCH).map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")+"</select>";}
-function emptyRow(cols,msg){return `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:22px">${msg||"Nothing here yet."}</td></tr>`;}
+/* ---------- HOLDINGS (by country) ---------- */
+function renderHoldings(){
+  const H=BOOK.holdings||[];
+  const present=COUNTRIES.filter(([code])=>H.some(h=>(h.country||countryFromTicker(h.ticker))===code));
+  const pills=COUNTRIES.map(([code,label])=>{const n=H.filter(h=>(h.country||countryFromTicker(h.ticker))===code).length; return `<span class="tag" style="${n?"color:var(--text-2)":""}">${label}${n?" · "+n:""}</span>`;}).join(" ");
+  const head=`<tr><th>Stock</th><th class="num">Cost</th><th class="num">LTP</th><th class="num">1D</th><th class="num">1W</th><th class="num">1M</th><th class="num">YTD</th><th class="num">Return</th><th></th></tr>`;
+  const rowHtml=h=>{const ccy=h.currency||ccyFromTicker(h.ticker), px=livePrice(h.ticker), q=quote(h.ticker)||{}; const ret=(px!=null&&h.entry)?px/h.entry-1:null;
+    return `<tr data-id="${h.id}" data-coll="holdings">
+      ${stockCell(h)}
+      <td><input class="cell w-sm" data-f="entry" type="number" value="${h.entry??""}"></td>
+      <td class="num">${money(px,ccy)}</td>
+      <td class="num">${pctSpanRaw(q.d1)}</td><td class="num">${pctSpanRaw(q.w1)}</td><td class="num">${pctSpanRaw(q.m1)}</td><td class="num">${pctSpanRaw(q.ytd)}</td>
+      <td class="num">${ret==null?"–":pctSpan(ret)}</td>
+      <td><span class="del" data-del>✕</span></td></tr>`;};
+  let groups="";
+  for(const [code,label] of present){
+    const rows=H.filter(h=>(h.country||countryFromTicker(h.ticker))===code);
+    groups+=`<tr class="grp-head"><td colspan="9">${label} <span class="cnt">· ${rows.length}</span></td></tr>`+rows.map(rowHtml).join("");
+  }
+  if(!H.length) groups=emptyRow(9,"No holdings yet — add one or upload a statement PDF.");
+  return `<div class="panel"><h2>Holdings</h2><div class="desc">Grouped by country. Cost = your entry price. LTP, 1D/1W/1M/YTD from the price feed. Return = LTP ÷ cost − 1.</div>
+    <div style="margin-bottom:12px">${pills}</div>
+    <div class="tw"><table><thead>${head}</thead><tbody>${groups}</tbody></table></div>
+    <div class="addbar"><button class="btn sm" data-addhold>+ Add holding</button><button class="btn sm gold" id="btnPdf">⬆ Upload statement (PDF)</button><input type="file" id="pdfInput" accept="application/pdf" class="hidden"><span class="small">PDF is read in your browser; you review before anything is added.</span></div></div>`;
+}
 
 /* ---------- editing / events ---------- */
-const NUMF=new Set(["qty","entry","exit","target"]);
+const NUMF=new Set(["entry","exit","target"]);
+const RENDER_ON=new Set(["call","entry","entryDate","exitDate"]);
 function wire(){
   const v=document.getElementById("views");
-  v.querySelectorAll("input.cell,select.cell").forEach(inp=>{
-    const ev=inp.tagName==="SELECT"||inp.type==="date"||inp.type==="number"?"change":"change";
-    inp.addEventListener(ev,e=>{
-      const tr=e.target.closest("tr"); const coll=tr.dataset.coll, id=tr.dataset.id, f=e.target.dataset.f;
-      const arr=BOOK[coll]; const obj=arr.find(o=>o.id===id); if(!obj) return;
-      if(f==="analyst"&&e.target.value==="__new"){ const nm=prompt("New analyst name:"); if(nm){const nid="a-"+Date.now().toString(36); (BOOK.analysts=BOOK.analysts||[]).push({id:nid,name:nm,note:""}); obj.analyst=nid;} save(); render(); return; }
-      let val=e.target.value;
-      if(NUMF.has(f)) val=val===""?null:parseFloat(val);
-      if((f==="exitDate"||f==="entryDate")&&val==="") val=(f==="exitDate")?null:"";
-      obj[f]=val;
-      if(f==="market"){obj.currency=MKT_CCY[val]||obj.currency;}
-      save(); render();
-    });
-  });
-  v.querySelectorAll("[data-del]").forEach(d=>d.onclick=e=>{
-    const tr=e.target.closest("tr"); const coll=tr.dataset.coll, id=tr.dataset.id;
-    BOOK[coll]=BOOK[coll].filter(o=>o.id!==id); save(); render();});
-  v.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addRow(b.dataset.add));
-  v.querySelectorAll("th[data-sort]").forEach(th=>th.onclick=()=>{const c=th.dataset.sort;
-    if(callSort.col===c) callSort.dir*=-1; else callSort={col:c,dir:c==="entryDate"?-1:1}; render();});
-  v.querySelectorAll("[data-pick]").forEach(r=>r.onclick=()=>{selAnalyst=r.dataset.pick; render();});
+  v.querySelectorAll(".seg [data-analyst]").forEach(b=>b.onclick=()=>{ if(b.dataset.analyst==="__new"){addAnalyst();return;} selAnalyst=b.dataset.analyst; section="calls"; syncHash(); render(); });
+  v.querySelectorAll(".seg [data-section]").forEach(b=>b.onclick=()=>{ section=b.dataset.section; syncHash(); render(); });
+  v.querySelectorAll("input.cell,select.cell").forEach(inp=>inp.addEventListener("change",e=>{
+    const tr=e.target.closest("tr"); const coll=tr.dataset.coll, id=tr.dataset.id, f=e.target.dataset.f;
+    const obj=(BOOK[coll]||[]).find(o=>o.id===id); if(!obj) return;
+    let val=e.target.value;
+    if(NUMF.has(f)) val=val===""?null:parseFloat(val);
+    if(f==="exitDate"&&val==="") val=null;
+    obj[f]=val; if(f==="ticker"){obj.country=countryFromTicker(val)||obj.country; obj.currency=ccyFromTicker(val);}
+    save(); if(RENDER_ON.has(f)) render();
+  }));
+  v.querySelectorAll("[data-del]").forEach(d=>d.onclick=e=>{const tr=e.target.closest("tr"); BOOK[tr.dataset.coll]=BOOK[tr.dataset.coll].filter(o=>o.id!==tr.dataset.id); save(); render();});
+  const addC=v.querySelector("[data-addcall]"); if(addC) addC.onclick=addCall;
+  const addH=v.querySelector("[data-addhold]"); if(addH) addH.onclick=addHolding;
   v.querySelectorAll("[data-chart]").forEach(s=>s.onclick=()=>openChart(s.dataset.chart,s.dataset.nm));
+  const pdfBtn=v.querySelector("#btnPdf"), pdfIn=v.querySelector("#pdfInput");
+  if(pdfBtn&&pdfIn){ pdfBtn.onclick=()=>pdfIn.click(); pdfIn.onchange=e=>{const f=e.target.files[0]; if(f) handlePdf(f); e.target.value="";}; }
 }
-function addRow(coll){
-  const id=coll[0]+"-"+Date.now().toString(36);
-  if(coll==="holdings") BOOK.holdings.push({id,name:"",ticker:"",market:"IN",currency:"INR",qty:null,entry:null,entryDate:"",source:"",notes:""});
-  if(coll==="watchlist") (BOOK.watchlist=BOOK.watchlist||[]).push({id,name:"",ticker:"",market:"IN",currency:"INR",stance:"Buy",target:null,source:"",notes:""});
-  if(coll==="calls"){const a=(BOOK.analysts||[])[0]; BOOK.calls.push({id,analyst:a?a.id:"",name:"",ticker:"",market:"IN",call:"Buy",entry:null,entryDate:new Date().toISOString().slice(0,10),exit:null,exitDate:null,source:"",notes:""});}
-  save(); render();
-}
+function addAnalyst(){const nm=prompt("Analyst name:"); if(!nm)return; const id="a-"+Date.now().toString(36); BOOK.analysts.push({id,name:nm,note:""}); selAnalyst=id; section="calls"; save(); render();}
+function addCall(){const id="c-"+Date.now().toString(36); BOOK.calls.push({id,analyst:selAnalyst,name:"",ticker:"",call:"Buy",entry:null,entryDate:new Date().toISOString().slice(0,10),exit:null,exitDate:null,source:"",notes:""}); save(); render();}
+function addHolding(){const id="h-"+Date.now().toString(36); BOOK.holdings.push({id,name:"",ticker:"",country:"IN",currency:"INR",entry:null,entryDate:"",source:"",notes:""}); save(); render();}
 
-/* ---------- charts ---------- */
-const CHART_INK="#a7adb8", GRID="rgba(255,255,255,0.06)";
-Chart.defaults.color=CHART_INK; Chart.defaults.font.family="Manrope, sans-serif";
-Chart.defaults.font.size=11;
-function cumSeriesFor(a){
-  const pts=a.calls.filter(k=>k.s.alpha!=null&&k.c.entryDate).sort((x,y)=>x.c.entryDate.localeCompare(y.c.entryDate));
-  let sum=0; return pts.map((k,i)=>{sum+=k.s.alpha; return {x:Date.parse(k.c.entryDate),y:100*sum/(i+1)};});
-}
-function linTimeAxis(){return {type:"linear",grid:{color:GRID},ticks:{maxTicksLimit:6,callback:v=>new Date(v).toLocaleDateString(undefined,{month:"short",year:"2-digit"})}};}
-function drawOverviewChart(){
-  const A=analystStats(); const ds=A.map(a=>({label:a.name,data:cumSeriesFor(a),borderColor:analystColor(a.idx),backgroundColor:analystColor(a.idx),tension:.25,pointRadius:2,borderWidth:2,spanGaps:true}));
-  const el=document.getElementById("ovChart"); if(!el)return;
-  charts.ov=new Chart(el,{type:"line",data:{datasets:ds},options:baseLine("Cumulative avg alpha %")});
-}
-function drawAnalystCharts(){
-  const A=analystStats();
-  const bar=document.getElementById("barChart");
-  if(bar){const vals=A.map(a=>a.avgAlpha==null?0:a.avgAlpha*100);
-    charts.bar=new Chart(bar,{type:"bar",data:{labels:A.map(a=>a.name),datasets:[{data:vals,
-      backgroundColor:vals.map(v=>v>=0?"#3fc78a":"#f06a6a"),borderRadius:4,barThickness:22}]},
-      options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:c=>` avg alpha ${c.parsed.x>=0?"+":""}${c.parsed.x.toFixed(2)}%`}}},
-        scales:{x:{grid:{color:GRID},ticks:{callback:v=>v+"%"}},y:{grid:{display:false}}}}});}
-  const an=document.getElementById("anChart"); const sel=A.find(a=>a.id===selAnalyst);
-  if(an&&sel){charts.an=new Chart(an,{type:"line",data:{datasets:[{label:sel.name+" cum. alpha",data:cumSeriesFor(sel),
-    borderColor:analystColor(sel.idx),backgroundColor:analystColor(sel.idx),tension:.25,pointRadius:3,borderWidth:2,spanGaps:true}]},
-    options:baseLine("Cumulative avg alpha %")});}
-}
-function baseLine(title){return {responsive:true,maintainAspectRatio:false,parsing:false,
-  plugins:{legend:{display:true,labels:{boxWidth:10,boxHeight:10,usePointStyle:true,padding:14}},
-    tooltip:{callbacks:{title:i=>new Date(i[0].parsed.x).toLocaleDateString(),label:c=>` ${c.dataset.label}: ${c.parsed.y>=0?"+":""}${c.parsed.y.toFixed(2)}%`}}},
-  scales:{x:linTimeAxis(),y:{grid:{color:GRID},ticks:{callback:v=>v+"%"},title:{display:true,text:title,color:"#6f7681"}}}};}
+/* ---------- price chart modal ---------- */
 function openChart(sym,nm){
   const cm=PRICES.closes[sym]; if(!cm){alert("No price history for "+sym);return;}
   const ks=Object.keys(cm).sort().slice(-180);
   const root=document.getElementById("modalRoot");
-  root.innerHTML=`<div class="modal"><div class="box"><span class="x" id="mx">×</span><h3>${esc(nm||sym)}</h3><div class="small">${esc(sym)} · adjusted close, last ~6 months</div><div class="chartbox" style="margin-top:10px"><canvas id="mChart"></canvas></div></div></div>`;
+  root.innerHTML=`<div class="modal"><div class="box"><span class="x" id="mx">×</span><h3>${esc(nm||sym)}</h3><div class="small">${esc(sym)} · adjusted close, ~6 months</div><div class="chartbox" style="margin-top:10px"><canvas id="mChart"></canvas></div></div></div>`;
   root.querySelector(".modal").onclick=e=>{if(e.target.classList.contains("modal"))root.innerHTML="";};
   document.getElementById("mx").onclick=()=>root.innerHTML="";
-  new Chart(document.getElementById("mChart"),{type:"line",data:{labels:ks,datasets:[{data:ks.map(k=>cm[k]),borderColor:"#e9a23b",backgroundColor:"rgba(233,162,59,.12)",fill:true,tension:.2,pointRadius:0,borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:6}},y:{grid:{color:GRID}}}}});
+  if(window.Chart) new Chart(document.getElementById("mChart"),{type:"line",data:{labels:ks,datasets:[{data:ks.map(k=>cm[k]),borderColor:"#e9a23b",backgroundColor:"rgba(233,162,59,.12)",fill:true,tension:.2,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:6}},y:{grid:{color:"rgba(255,255,255,.06)"}}}}});
 }
 
-/* ---------- export / reset ---------- */
-document.getElementById("btnExport").onclick=()=>{
-  const out=structuredClone(BOOK); out.updated=new Date().toISOString().slice(0,10);
-  const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="book.json"; a.click();
-};
-document.getElementById("btnReset").onclick=()=>{
-  if(confirm("Discard local edits and reload the published book.json?")){localStorage.removeItem(LS_KEY); BOOK=structuredClone(SEED); render();}
-};
+/* ---------- PDF upload → parse → review → fill Holdings ---------- */
+const SAMPLE_STMT=`Portfolio Statement as of 29 Jul 2026
+Stock                     Qty       Avg Cost
+Reliance Industries       145265    1308.00
+TSMC                      5000      1100.00
+Tencent Holdings          8000      620.00
+DBS Group Holdings        3000      38.50
+Samsung Electronics       12000     71000.00`;
+function parseHoldingsText(text){
+  // PDF text arrives word-by-word (many spaces). Take the full name = everything before
+  // the first number; cost = the first decimal number (prices carry decimals), else the
+  // last integer. Rows are always reviewed before saving, so err toward capturing.
+  const out=[];
+  text.split(/\r?\n/).forEach(raw=>{
+    const line=raw.replace(/\s+/g," ").trim();
+    if(!line) return;
+    if(/^(total|subtotal|grand total|net|cash|balance|opening|closing)\b/i.test(line)) return;
+    if(/\b(qty|quantity|avg\s*cost|market\s*value|statement|portfolio|symbol|units?|as of|shares?)\b/i.test(line) && !/\d[\d,]*\.\d/.test(line)) return;
+    const m=line.match(/^([A-Za-z][A-Za-z0-9 .&'\/\-]*?)\s+([\d(].*)$/);
+    if(!m) return;
+    const name=m[1].trim(), rest=m[2];
+    const decs=rest.match(/\d[\d,]*\.\d+/g), ints=rest.match(/\d[\d,]+/g);
+    if(name.length<2 || (!decs && !ints)) return;
+    const cost=parseFloat((decs?decs[0]:ints[ints.length-1]).replace(/,/g,""));
+    out.push({name, ticker:"", cost:isNaN(cost)?null:cost, country:""});
+  });
+  return out;
+}
+async function handlePdf(file){
+  const key=localStorage.getItem(LS_CLAUDE);
+  toast(`<span class="spin"></span> Reading ${esc(file.name)}…`);
+  let text="";
+  try{ text=await extractPdfText(await file.arrayBuffer()); }
+  catch(e){ toast(""); alert("Could not read PDF: "+e.message); return; }
+  let rows;
+  if(key){ try{ rows=await extractWithClaude(text,key); }catch(e){ rows=parseHoldingsText(text); toast(""); } }
+  else rows=parseHoldingsText(text);
+  toast("");
+  if(!rows||!rows.length){ alert("Couldn't find any holdings in that PDF — try adding rows manually."); return; }
+  reviewHoldings(rows,file.name);
+}
+async function extractPdfText(buf){
+  const pdfjs=window.pdfjsLib;
+  if(!pdfjs) throw new Error("PDF library still loading — try again in a second");
+  pdfjs.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+  const doc=await pdfjs.getDocument({data:buf}).promise;
+  let out="";
+  for(let p=1;p<=doc.numPages;p++){
+    const content=await (await doc.getPage(p)).getTextContent();
+    let lastY=null,line="";
+    for(const it of content.items){ const y=it.transform[5];
+      if(lastY!==null&&Math.abs(y-lastY)>3){ out+=line.trimEnd()+"\n"; line=""; }
+      line+=it.str+(it.hasEOL?"":"  "); lastY=y; }
+    out+=line+"\n";
+  }
+  return out;
+}
+async function extractWithClaude(text,key){
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:"claude-sonnet-5",max_tokens:2000,messages:[{role:"user",content:`Extract the holdings from this brokerage/portfolio statement. Return ONLY a JSON array of objects {"name","ticker","cost","country"} — name=company name; ticker=Yahoo symbol if inferable else ""; cost=average cost per share as a number; country one of HK,CN,IN,TW,KR,ASEAN,US,JP. No prose.\n\n${text.slice(0,12000)}`}]})});
+  if(!res.ok) throw new Error("Anthropic "+res.status);
+  const j=await res.json(); const raw=(j.content&&j.content[0]&&j.content[0].text)||"[]";
+  return JSON.parse(raw.slice(raw.indexOf("["),raw.lastIndexOf("]")+1));
+}
+function reviewHoldings(rows,src){
+  const root=document.getElementById("modalRoot");
+  const opts=c=>COUNTRIES.map(([code,label])=>`<option value="${code}" ${c===code?"selected":""}>${label}</option>`).join("");
+  const body=rows.map((r,i)=>`<tr data-i="${i}">
+    <td><input class="cell w-name" data-rf="name" value="${esc(r.name||"")}"></td>
+    <td><input class="cell w-tk" data-rf="ticker" value="${esc(r.ticker||"")}" placeholder="e.g. 2330.TW"></td>
+    <td><select class="cell w-sm" data-rf="country">${opts(r.country||"")}</select></td>
+    <td><input class="cell w-sm" data-rf="cost" type="number" value="${r.cost??""}"></td>
+    <td><span class="del" data-rdel>✕</span></td></tr>`).join("");
+  root.innerHTML=`<div class="modal"><div class="box"><span class="x" id="mx">×</span><h3>Review extracted holdings</h3>
+    <div class="small">From ${esc(src)} · ${rows.length} row(s). Add a Yahoo ticker (with suffix) so prices resolve. Fix anything, then add.</div>
+    <div class="note">This is a draft from the PDF — nothing is saved until you click Add.</div>
+    <div class="tw"><table><thead><tr><th>Name</th><th>Ticker</th><th>Country</th><th class="num">Cost</th><th></th></tr></thead><tbody id="revBody">${body}</tbody></table></div>
+    <div class="addbar"><button class="btn gold" id="revAdd">Add ${rows.length} holding(s)</button><button class="btn ghost" id="revCancel">Cancel</button></div></div></div>`;
+  const state=rows.map(r=>({...r}));
+  root.querySelector("#mx").onclick=root.querySelector("#revCancel").onclick=()=>root.innerHTML="";
+  root.querySelectorAll("#revBody [data-rf]").forEach(inp=>inp.addEventListener("change",e=>{const i=+e.target.closest("tr").dataset.i,f=e.target.dataset.rf; state[i][f]=f==="cost"?(e.target.value===""?null:parseFloat(e.target.value)):e.target.value;}));
+  root.querySelectorAll("#revBody [data-rdel]").forEach(d=>d.onclick=e=>{const i=+e.target.closest("tr").dataset.i; state[i]._x=true; e.target.closest("tr").remove();});
+  root.querySelector("#revAdd").onclick=()=>{
+    state.filter(r=>!r._x&&(r.name||r.ticker)).forEach(r=>{const tk=(r.ticker||"").trim(); BOOK.holdings.push({id:"h-"+Math.random().toString(36).slice(2,8),name:r.name||"",ticker:tk,country:r.country||countryFromTicker(tk),currency:ccyFromTicker(tk),entry:r.cost??null,entryDate:"",source:"pdf import",notes:""});});
+    save(); root.innerHTML=""; view="holdings"; buildNav(); render();
+  };
+}
+function toast(html){let t=document.getElementById("toast"); if(!t){t=document.createElement("div");t.id="toast";t.style.cssText="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border-2);padding:9px 16px;border-radius:10px;z-index:80;font-size:13px";document.body.appendChild(t);} if(!html){t.remove();return;} t.innerHTML=html;}
+
+/* ---------- Settings (Claude key + GitHub token) ---------- */
+function openSettings(){
+  const root=document.getElementById("modalRoot");
+  root.innerHTML=`<div class="modal"><div class="box"><span class="x" id="mx">×</span><h3>Settings</h3>
+    <div class="field"><label>Anthropic (Claude) API key — optional, for accurate PDF extraction</label><input id="setKey" type="password" placeholder="sk-ant-…" value="${esc(localStorage.getItem(LS_CLAUDE)||"")}"></div>
+    <div class="field"><label>GitHub token — optional, lets “Publish” commit book.json to ${REPO}</label><input id="setTok" type="password" placeholder="github_pat_…" value="${esc(localStorage.getItem(LS_GH)||"")}"></div>
+    <div class="note">Both are stored only in this browser (localStorage) and sent directly to Anthropic / GitHub. Use a fine-grained GitHub token limited to this repo's <b>Contents: read &amp; write</b>.</div>
+    <div class="addbar"><button class="btn gold" id="setSave">Save</button><button class="btn ghost" id="setClear">Clear both</button></div></div></div>`;
+  root.querySelector("#mx").onclick=()=>root.innerHTML="";
+  root.querySelector("#setSave").onclick=()=>{const k=root.querySelector("#setKey").value.trim(),t=root.querySelector("#setTok").value.trim(); k?localStorage.setItem(LS_CLAUDE,k):localStorage.removeItem(LS_CLAUDE); t?localStorage.setItem(LS_GH,t):localStorage.removeItem(LS_GH); root.innerHTML=""; toast("Saved."); setTimeout(()=>toast(""),1200);};
+  root.querySelector("#setClear").onclick=()=>{localStorage.removeItem(LS_CLAUDE); localStorage.removeItem(LS_GH); root.innerHTML="";};
+}
+
+/* ---------- export / publish / reset ---------- */
+function bookOut(){const o=structuredClone(BOOK); o.updated=new Date().toISOString().slice(0,10); return o;}
+document.getElementById("btnExport").onclick=()=>{const blob=new Blob([JSON.stringify(bookOut(),null,2)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="book.json"; a.click();};
+document.getElementById("btnReset").onclick=()=>{if(confirm("Discard local edits and reload the published book.json?")){localStorage.removeItem(LS_BOOK); BOOK=structuredClone(SEED); selAnalyst=BOOK.analysts[0]?.id||null; render();}};
+document.getElementById("btnSettings").onclick=openSettings;
+document.getElementById("btnPublish").onclick=publish;
+async function publish(){
+  const tok=localStorage.getItem(LS_GH); if(!tok){alert("Add a GitHub token in Settings first."); openSettings(); return;}
+  const path="data/book.json", api=`https://api.github.com/repos/${REPO}/contents/${path}`;
+  toast(`<span class="spin"></span> Publishing…`);
+  try{
+    const cur=await fetch(api,{headers:{authorization:"Bearer "+tok,accept:"application/vnd.github+json"}});
+    const sha=cur.ok?(await cur.json()).sha:undefined;
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(bookOut(),null,2))));
+    const res=await fetch(api,{method:"PUT",headers:{authorization:"Bearer "+tok,accept:"application/vnd.github+json","content-type":"application/json"},body:JSON.stringify({message:"Update book.json via portal",content,sha})});
+    toast("");
+    if(res.ok) alert("Published ✓ — the site redeploys in ~1 minute.");
+    else alert("Publish failed ("+res.status+"). Check the token scope.");
+  }catch(e){ toast(""); alert("Publish error: "+e.message); }
+}
+function emptyRow(cols,msg){return `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:22px">${msg||"Nothing here yet."}</td></tr>`;}
 load();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 </body>
 </html>
