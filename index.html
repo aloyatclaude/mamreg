@@ -261,7 +261,7 @@ function renderAnalysts(){
     <div class="tile"><div class="k">Return vs benchmark</div><div class="v">${pctSpan(sum.avgAlpha)}</div><div class="small">avg alpha per call</div></div>
     <div class="tile"><div class="k">Calls</div><div class="v">${sum.calls.length} <small>${sum.open.length} open · ${sum.closed.length} closed</small></div><div class="small">${sum.nNames} names</div></div>
   </div>`;
-  const segs=`<div class="seg small">${[["calls","Calls"],["historical","Historical Trades"],["coverage","Coverage List"]].map(s=>`<button class="${s[0]===section?"on":""}" data-section="${s[0]}">${s[1]}</button>`).join("")}</div>`;
+  const segs=`<div class="seg small">${[["calls","Alpha"],["historical","Historical Trades"],["coverage","Coverage List"]].map(s=>`<button class="${s[0]===section?"on":""}" data-section="${s[0]}">${s[1]}</button>`).join("")}</div>`;
   let body="";
   if(section==="calls") body=callsTable(sum.open,true);
   else if(section==="historical") body=callsTable(sum.closed,false);
