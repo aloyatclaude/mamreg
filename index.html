@@ -151,7 +151,7 @@ const ccyFromTicker=t=>SUFFIX_CCY[sfx(t)]||"USD";
 
 let BOOK=null, PRICES={quotes:{},closes:{},fx:{},generated:null}, SEED=null;
 let SORTED={};
-let view="analysts", selAnalyst=null, section="calls";
+let view="analysts", selAnalyst=null, section="calls", tileScope="auto";
 let charts={};
 
 /* ---------- load / save (book in Cloudflare KV via the Worker) ---------- */
@@ -356,6 +356,20 @@ function analystSummary(id){
     avgRet:mean(calls.map(x=>x.s.stockRet).filter(v=>v!=null)),
     avgAlpha:mean(calls.map(x=>x.s.alpha).filter(v=>v!=null))};
 }
+const _mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+const plur=(n,w)=>n+" "+w+(n===1?"":"s");
+function coverageSummary(id){   // KPI scope = the analyst's coverage list (return since first covered)
+  const cov=(BOOK.coverage||[]).filter(o=>o.analyst===id), tots=cov.map(covTotal);
+  return {names:cov.length, changes:cov.reduce((n,o)=>n+((o.history||[]).length),0),
+    avgRet:_mean(tots.map(t=>t.abs).filter(v=>v!=null)),
+    avgRel:_mean(tots.map(t=>t.rel).filter(v=>v!=null))};
+}
+function totalSummary(id){      // KPI scope = Alpha calls + Coverage names pooled together
+  const a=analystSummary(id), cov=(BOOK.coverage||[]).filter(o=>o.analyst===id).map(covTotal);
+  const rets=[...a.calls.map(x=>x.s.stockRet), ...cov.map(t=>t.abs)].filter(v=>v!=null);
+  const rels=[...a.calls.map(x=>x.s.alpha),    ...cov.map(t=>t.rel)].filter(v=>v!=null);
+  return {avgRet:_mean(rets), avgRel:_mean(rels), calls:a.calls.length, names:cov.length};
+}
 
 /* ---------- formatting ---------- */
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
@@ -393,14 +407,27 @@ function renderAnalysts(){
   const analysts=BOOK.analysts||[];
   if(!selAnalyst&&analysts[0]) selAnalyst=analysts[0].id;
   const tabs=`<div class="seg">${analysts.map(a=>`<button class="${a.id===selAnalyst?"on":""}" data-analyst="${a.id}">${esc(a.name)}</button>`).join("")}<button data-analyst="__new" title="Add analyst">＋</button></div>`;
-  const sum=analystSummary(selAnalyst);
-  const tiles=`<div class="grid tiles">
-    <div class="tile"><div class="k">Overall return</div><div class="v">${pctSpan(sum.avgRet)}</div><div class="small">avg per call</div></div>
-    <div class="tile"><div class="k">Hit rate</div><div class="v">${sum.hitPct==null?"–":Math.round(sum.hitPct*100)+"%"}</div><div class="small">${sum.hits}/${sum.scored} scored${sum.scored<5?" · small sample":""}</div></div>
-    <div class="tile"><div class="k">Return vs benchmark</div><div class="v">${pctSpan(sum.avgAlpha)}</div><div class="small">avg alpha per call</div></div>
-    <div class="tile"><div class="k">Calls</div><div class="v">${sum.calls.length} <small>${sum.open.length} open · ${sum.closed.length} closed</small></div><div class="small">${sum.nNames} names</div></div>
-  </div>`;
   if(!["calls","coverage"].includes(section)) section="calls";
+  const sum=analystSummary(selAnalyst);
+  const scope = tileScope==="auto" ? (section==="coverage"?"coverage":"alpha") : tileScope;
+  const scopeLbl={alpha:"Alpha calls",coverage:"Coverage list",total:"Alpha + Coverage"}[scope];
+  const tileToggle=`<div class="seg small">${[["auto","Auto"],["alpha","Alpha"],["coverage","Coverage"],["total","Total"]].map(s=>`<button class="${s[0]===tileScope?"on":""}" data-tilescope="${s[0]}">${s[1]}</button>`).join("")}</div>`;
+  let cells;
+  if(scope==="coverage"){ const cs=coverageSummary(selAnalyst);
+    cells=`<div class="tile"><div class="k">Overall return</div><div class="v">${pctSpan(cs.avgRet)}</div><div class="small">avg since first covered</div></div>
+      <div class="tile"><div class="k">Return vs benchmark</div><div class="v">${pctSpan(cs.avgRel)}</div><div class="small">avg vs index</div></div>
+      <div class="tile"><div class="k">Coverage</div><div class="v">${cs.names} <small>${cs.names===1?"name":"names"}</small></div><div class="small">${plur(cs.changes,"rating change")}</div></div>`;
+  } else if(scope==="total"){ const ts=totalSummary(selAnalyst);
+    cells=`<div class="tile"><div class="k">Overall return</div><div class="v">${pctSpan(ts.avgRet)}</div><div class="small">calls &amp; coverage</div></div>
+      <div class="tile"><div class="k">Return vs benchmark</div><div class="v">${pctSpan(ts.avgRel)}</div><div class="small">avg vs index / alpha</div></div>
+      <div class="tile"><div class="k">Positions</div><div class="v">${ts.calls+ts.names} <small>${plur(ts.calls,"call")} · ${plur(ts.names,"name")}</small></div><div class="small">Alpha + Coverage</div></div>`;
+  } else {
+    cells=`<div class="tile"><div class="k">Overall return</div><div class="v">${pctSpan(sum.avgRet)}</div><div class="small">avg per call</div></div>
+      <div class="tile"><div class="k">Hit rate</div><div class="v">${sum.hitPct==null?"–":Math.round(sum.hitPct*100)+"%"}</div><div class="small">${sum.hits}/${sum.scored} scored${sum.scored<5?" · small sample":""}</div></div>
+      <div class="tile"><div class="k">Return vs benchmark</div><div class="v">${pctSpan(sum.avgAlpha)}</div><div class="small">avg alpha per call</div></div>
+      <div class="tile"><div class="k">Calls</div><div class="v">${sum.calls.length} <small>${sum.open.length} open · ${sum.closed.length} closed</small></div><div class="small">${sum.nNames} names</div></div>`;
+  }
+  const tiles=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px"><span class="small" style="color:var(--muted)">KPIs · <b style="color:var(--text-2)">${scopeLbl}</b>${tileScope==="auto"?" (auto)":""}</span>${tileToggle}</div><div class="grid tiles">${cells}</div>`;
   const segs=`<div class="seg small">${[["calls","Alpha"],["coverage","Coverage List"]].map(s=>`<button class="${s[0]===section?"on":""}" data-section="${s[0]}">${s[1]}</button>`).join("")}</div>`;
   const body = section==="coverage" ? coverageTable() : (alphaOpenTable(sum.open)+alphaClosedTable(sum.closed));
   return tabs+tiles+`<div class="panel">${segs}${body}</div>`;
@@ -495,10 +522,16 @@ function covTotal(o){
 function coverageRow(o){
   const ccy=ccyFromTicker(o.ticker), px=livePrice(o.ticker), bench=benchFromTicker(o.ticker), benchNm=BENCH_NAME[bench]||"";
   const cur=currentRating(o), tot=covTotal(o), n=(o.history||[]).length, open=openCov.has(o.id);
+  const first=sortedHistory(o)[0], entryPx=first?oob(o.ticker,first.date):null;
+  const entryCell=first
+    ? `<input class="cell w-dt" type="date" data-entrydate data-histid="${first.id}" value="${esc(first.date||"")}" title="Start of coverage — the first stance's date">`
+    : `<span class="flat">–</span>`;
   const main=`<tr data-id="${o.id}" data-coll="coverage">
+    <td>${entryCell}</td>
     <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(o.ticker||"")}" placeholder="TICKER.XX"></td>
     <td><input class="cell" data-f="name" style="min-width:150px;text-align:left;font-family:'Manrope'" value="${esc(o.name||"")}" placeholder="(auto)"></td>
     <td>${ratingSelect(cur,'data-covrate')}</td>
+    <td class="num">${entryPx!=null?money(entryPx,ccy):"–"}</td>
     <td class="num">${px!=null?money(px,ccy):"–"}</td>
     <td class="num">${pctSpan(tot.abs)}</td>
     <td class="num">${tot.rel==null?'<span class="flat">–</span>':pctSpan(tot.rel)}${tot.rel!=null&&benchNm?` <span class="tag">${esc(benchNm)}</span>`:""}</td>
@@ -518,7 +551,7 @@ function coverageDetail(o){
       <td><span class="del" data-histdel>✕</span></td></tr>`).join("")
     : `<tr><td colspan="6" style="color:var(--muted);padding:10px">No rating changes yet — add one below.</td></tr>`;
   const foot=`<tr class="subtotal"><td colspan="3">Total since first covered${tot.from?" · from "+fmtDate(tot.from):""}</td><td class="num">${pctSpan(tot.abs)}</td><td class="num">${pctSpan(tot.rel)}</td><td></td></tr>`;
-  return `<tr class="cov-detail"><td colspan="9" style="background:var(--surface-2);padding:10px 14px 12px">
+  return `<tr class="cov-detail"><td colspan="11" style="background:var(--surface-2);padding:10px 14px 12px">
     <div class="small" style="color:var(--text-2);margin-bottom:6px"><b>Rating history — ${esc(o.name||o.ticker||"")}</b> · the stock's return during each stance, absolute and vs ${esc(benchNm)}.</div>
     <table style="width:auto;min-width:520px"><thead><tr><th style="text-align:left">Date changed</th><th style="text-align:left">Rating</th><th style="text-align:left">Period</th><th class="num">Return</th><th class="num">vs Index</th><th></th></tr></thead>
       <tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>
@@ -527,9 +560,9 @@ function coverageDetail(o){
 }
 function coverageTable(){
   const rows=(BOOK.coverage||[]).filter(o=>o.analyst===selAnalyst);
-  const head=`<tr><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Rating</th><th class="num">Last price</th><th class="num">Total return</th><th class="num">vs Index</th><th class="num">History</th><th>Comment</th><th></th></tr>`;
-  const body=rows.length?rows.map(coverageRow).join(""):emptyRow(9,"No coverage yet — click + Add name.");
-  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. <b>Rating</b> = current stance (OW / N / UW). <b>Total return / vs Index</b> = the stock's return since first covered, and vs its market index. Open <b>History</b> (▸) to log dated rating changes and see the return during each stance. Click <b>💬 Comment</b> to record the thesis readers see.</div>
+  const head=`<tr><th style="text-align:left">Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Rating</th><th class="num">Entry price</th><th class="num">Last price</th><th class="num">Total return</th><th class="num">vs Index</th><th class="num">History</th><th>Comment</th><th></th></tr>`;
+  const body=rows.length?rows.map(coverageRow).join(""):emptyRow(11,"No coverage yet — click + Add name.");
+  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. <b>Entry date</b> = start of coverage (your first stance); <b>Entry price</b> = its closing price. <b>Rating</b> = current stance (OW / N / UW). <b>Total return / vs Index</b> = the stock's return since first covered (Entry price → Last price), and vs its market index. Open <b>History</b> (▸) to log dated rating changes and see the return during each stance. Click <b>💬 Comment</b> to record the thesis readers see.</div>
     <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>
     <div class="addbar"><button class="btn sm" data-addcov>+ Add name</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search — name and price fill in automatically. Independent of your timed Alpha calls.</span></div>`;
 }
@@ -592,8 +625,9 @@ function wire(){
   const v=document.getElementById("views");
   v.querySelectorAll(".seg [data-analyst]").forEach(b=>b.onclick=()=>{ if(b.dataset.analyst==="__new"){addAnalyst();return;} selAnalyst=b.dataset.analyst; section="calls"; syncHash(); render(); });
   v.querySelectorAll(".seg [data-section]").forEach(b=>b.onclick=()=>{ section=b.dataset.section; syncHash(); render(); });
+  v.querySelectorAll("[data-tilescope]").forEach(b=>b.onclick=()=>{ tileScope=b.dataset.tilescope; render(); });
   v.querySelectorAll("input.cell,select.cell").forEach(inp=>inp.addEventListener("change",e=>{
-    if(e.target.matches("[data-covrate],[data-histrate],[data-histdate]")) return;  // handled below
+    if(e.target.matches("[data-covrate],[data-histrate],[data-histdate],[data-entrydate]")) return;  // handled below
     const tr=e.target.closest("tr"); const coll=tr.dataset.coll, id=tr.dataset.id, f=e.target.dataset.f;
     const obj=(BOOK[coll]||[]).find(o=>o.id===id); if(!obj) return;
     let val=e.target.value;
@@ -611,6 +645,7 @@ function wire(){
   // coverage: current-rating select (logs a today-dated stance change) + history expand/edit
   v.querySelectorAll("[data-covrate]").forEach(s=>s.addEventListener("change",e=>setCovRatingToday(e.target.closest("tr").dataset.id,e.target.value)));
   v.querySelectorAll("[data-covtoggle]").forEach(t=>t.onclick=e=>{const id=e.target.closest("tr").dataset.id; openCov.has(id)?openCov.delete(id):openCov.add(id); render();});
+  v.querySelectorAll("[data-entrydate]").forEach(i=>i.addEventListener("change",e=>editHist(e.target.dataset.histid,"date",e.target.value)));
   v.querySelectorAll("[data-histdate]").forEach(i=>i.addEventListener("change",e=>editHist(e.target.closest("tr").dataset.histid,"date",e.target.value)));
   v.querySelectorAll("[data-histrate]").forEach(s=>s.addEventListener("change",e=>editHist(e.target.closest("tr").dataset.histid,"rating",e.target.value)));
   v.querySelectorAll("[data-histdel]").forEach(d=>d.onclick=e=>delHist(e.target.closest("tr").dataset.histid));

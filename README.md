@@ -10,15 +10,19 @@ auto-save to the cloud. Prices are indicative (delayed ~15 min via the Worker's 
 ## Two tabs
 
 - **Analysts** — one sub-tab per analyst (**Mark · Ang · Aloy**, add more with ＋). Each analyst
-  shows a summary — **overall return · hit rate · return vs benchmark · #calls** — then:
+  shows a **summary that switches scope** — a toggle **Auto · Alpha · Coverage · Total** picks whether
+  the tiles reflect the timed Alpha calls, the Coverage list, or both combined (**Auto** follows the
+  sub-tab you're on). Hit rate shows in **Alpha** scope only. Then:
   - **Alpha** — open calls on top, **Closed calls** table below (with exit date + exit price).
     Columns: Entry date · Ticker · Stock · Call · Entry cost · Return · Index return · Return vs
     index · Result · Close.
-  - **Coverage List** — an editable list you key in yourself (independent of Alpha): Ticker · Stock ·
-    **Rating** (OW / N / UW) · Last price · **Total return** · vs Index · **History** · **Comment**.
-    Each covered stock keeps its own dated **rating-change history**; open **History** (▸) to log
-    stance changes and see the stock's return *during each stance* (absolute and vs index). **Total
-    return** = the stock's return since first covered (the per-stance returns compound into it).
+  - **Coverage List** — an editable list you key in yourself (independent of Alpha): **Entry date** ·
+    Ticker · Stock · **Rating** (OW / N / UW) · **Entry price** · Last price · **Total return** · vs
+    Index · **History** · **Comment**. Each covered stock keeps its own dated **rating-change
+    history**; open **History** (▸) to log stance changes and see the stock's return *during each
+    stance* (absolute and vs index). **Entry date** = start of coverage (first stance); **Entry
+    price** = its closing price; **Total return** = the stock's return since first covered (Entry
+    price → Last price; the per-stance returns compound into it).
   - **Comment (💬)** — every Alpha call and coverage name has a 💬 you click to write/read the
     thesis behind it (gold when set, muted when empty).
 - **Holdings** — positions grouped by **country** (HK · China · India · Taiwan · Korea · ASEAN):
