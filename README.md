@@ -1,7 +1,7 @@
 # Research Portal — calls by analyst
 
 A single-page dashboard to **record and grade stock calls by analyst**, plus a light
-**holdings** view grouped by country. Live at https://aloyatclaude.github.io/mamreg/.
+**holdings** view grouped by country. Live at https://mamreg.github.io/mamreg/.
 
 No backend — a static `index.html` on GitHub Pages; a scheduled GitHub Action refreshes prices
 at deploy time. Prices are indicative (delayed).

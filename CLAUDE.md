@@ -1,7 +1,7 @@
 # CLAUDE.md — Research Portal (mamreg)
 
 Static, backend-less dashboard to **record & grade stock calls by analyst**, plus holdings by
-country. Served from GitHub Pages (`aloyatclaude/mamreg`); prices fetched at deploy time.
+country. Served from GitHub Pages (`mamreg/mamreg`); prices fetched at deploy time.
 
 ## Architecture (keep it this way)
 
