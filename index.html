@@ -235,7 +235,7 @@ function buildNav(){
 function parseHash(){
   const parts=(location.hash||"").replace(/^#/,"").split("/").filter(Boolean);
   if(parts[0]&&TABS.some(t=>t[0]===parts[0])) view=parts[0];
-  if(view==="analysts"){ if(parts[1]) selAnalyst=parts[1]; if(parts[2]&&["calls","historical","coverage"].includes(parts[2])) section=parts[2]; }
+  if(view==="analysts"){ if(parts[1]) selAnalyst=parts[1]; if(parts[2]&&["calls","coverage"].includes(parts[2])) section=parts[2]; }
 }
 function syncHash(){ let h="#"+view; if(view==="analysts") h+="/"+(selAnalyst||"")+"/"+section; try{history.replaceState(null,"",h);}catch(e){} }
 window.addEventListener("hashchange",()=>{const before=view+selAnalyst+section; parseHash(); if(view+selAnalyst+section!==before){buildNav();render();}});
@@ -261,42 +261,67 @@ function renderAnalysts(){
     <div class="tile"><div class="k">Return vs benchmark</div><div class="v">${pctSpan(sum.avgAlpha)}</div><div class="small">avg alpha per call</div></div>
     <div class="tile"><div class="k">Calls</div><div class="v">${sum.calls.length} <small>${sum.open.length} open · ${sum.closed.length} closed</small></div><div class="small">${sum.nNames} names</div></div>
   </div>`;
-  const segs=`<div class="seg small">${[["calls","Alpha"],["historical","Historical Trades"],["coverage","Coverage List"]].map(s=>`<button class="${s[0]===section?"on":""}" data-section="${s[0]}">${s[1]}</button>`).join("")}</div>`;
-  let body="";
-  if(section==="calls") body=callsTable(sum.open,true);
-  else if(section==="historical") body=callsTable(sum.closed,false);
-  else body=coverageTable(sum);
+  if(!["calls","coverage"].includes(section)) section="calls";
+  const segs=`<div class="seg small">${[["calls","Alpha"],["coverage","Coverage List"]].map(s=>`<button class="${s[0]===section?"on":""}" data-section="${s[0]}">${s[1]}</button>`).join("")}</div>`;
+  const body = section==="coverage" ? coverageTable(sum) : (alphaOpenTable(sum.open)+alphaClosedTable(sum.closed));
   return tabs+tiles+`<div class="panel">${segs}${body}</div>`;
 }
-function callRow(x,openMode){
-  const c=x.c,s=x.s;
+function idxCell(s){
+  const tag=(s.benchRet!=null&&s.benchmark)?` <span class="tag">${esc(BENCH_NAME[s.benchmark]||"")}</span>`:"";
+  return `<td class="num">${pctSpan(s.benchRet)}${tag}</td>`;
+}
+function aggr(rows){
+  const scored=rows.filter(x=>x.s.result==="HIT"||x.s.result==="MISS"), hits=scored.filter(x=>x.s.result==="HIT").length;
+  const mean=a=>a.length?a.reduce((p,q)=>p+q,0)/a.length:null;
+  return {n:scored.length, hits, hitTxt:scored.length?Math.round(100*hits/scored.length)+"% ("+hits+"/"+scored.length+")":"–",
+    avgR:mean(rows.map(x=>x.s.stockRet).filter(v=>v!=null)), avgB:mean(rows.map(x=>x.s.benchRet).filter(v=>v!=null)), avgA:mean(rows.map(x=>x.s.alpha).filter(v=>v!=null))};
+}
+function alphaOpenRow(x){
+  const c=x.c,s=x.s, ccy=ccyFromTicker(c.ticker);
   return `<tr data-id="${c.id}" data-coll="calls">
-    ${stockCell(c)}
-    <td>${callSelect(c.call)}</td>
-    <td class="num">${s.entryPx!=null?nf(s.entryPx):"–"}</td>
     <td><input class="cell w-dt" data-f="entryDate" type="date" value="${esc(c.entryDate||"")}"></td>
-    <td class="num">${s.open?'<span class="flat">—</span>':(s.exitPx!=null?nf(s.exitPx):"–")}</td>
-    <td><input class="cell w-dt" data-f="exitDate" type="date" value="${esc(c.exitDate||"")}"></td>
+    <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(c.ticker||"")}" placeholder="TICKER.XX"></td>
+    <td><input class="cell" data-f="name" style="min-width:140px;text-align:left;font-family:'Manrope'" value="${esc(c.name||"")}" placeholder="(auto)"></td>
+    <td>${callSelect(c.call)}</td>
+    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):"–"}</td>
     <td class="num">${pctSpan(s.stockRet)}</td>
-    <td class="num">${pctSpan(s.benchRet)}</td>
+    ${idxCell(s)}
     <td class="num">${pctSpan(s.alpha)}</td>
-    <td class="num">${resultBadge(s.result,s.open)}</td>
+    <td class="num">${resultBadge(s.result,true)}</td>
+    <td style="white-space:nowrap"><button class="btn sm" data-close>Close</button> <span class="del" data-del>✕</span></td></tr>`;
+}
+function alphaClosedRow(x){
+  const c=x.c,s=x.s, ccy=ccyFromTicker(c.ticker);
+  return `<tr data-id="${c.id}" data-coll="calls">
+    <td><input class="cell w-dt" data-f="entryDate" type="date" value="${esc(c.entryDate||"")}"></td>
+    <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(c.ticker||"")}"></td>
+    <td><input class="cell" data-f="name" style="min-width:140px;text-align:left;font-family:'Manrope'" value="${esc(c.name||"")}"></td>
+    <td>${callSelect(c.call)}</td>
+    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):"–"}</td>
+    <td><input class="cell w-dt" data-f="exitDate" type="date" value="${esc(c.exitDate||"")}"></td>
+    <td class="num">${s.exitPx!=null?money(s.exitPx,ccy):"–"}</td>
+    <td class="num">${pctSpan(s.stockRet)}</td>
+    ${idxCell(s)}
+    <td class="num">${pctSpan(s.alpha)}</td>
+    <td class="num">${resultBadge(s.result,false)}</td>
     <td><span class="del" data-del>✕</span></td></tr>`;
 }
-function callsTable(rows,openMode){
-  const bench=rows[0]?BENCH_NAME[rows[0].s.benchmark]||"Index":"Index";
-  const scored=rows.filter(x=>x.s.result==="HIT"||x.s.result==="MISS");
-  const hits=scored.filter(x=>x.s.result==="HIT").length;
-  const mean=a=>a.length?a.reduce((p,q)=>p+q,0)/a.length:null;
-  const avgR=mean(rows.map(x=>x.s.stockRet).filter(v=>v!=null));
-  const avgA=mean(rows.map(x=>x.s.alpha).filter(v=>v!=null));
-  const avgB=mean(rows.map(x=>x.s.benchRet).filter(v=>v!=null));
-  const head=`<tr><th>Stock</th><th>Call</th><th class="num">Entry</th><th>Entry date</th><th class="num">Exit</th><th>Exit date</th><th class="num">Return</th><th class="num">vs Index</th><th class="num">+/−</th><th class="num">Result</th><th></th></tr>`;
-  const foot=rows.length?`<tr class="subtotal"><td>${openMode?"Open":"Realized"} · ${rows.length}</td><td colspan="5">Hit rate ${scored.length?Math.round(100*hits/scored.length)+"% ("+hits+"/"+scored.length+")":"–"}</td><td class="num">${pctSpan(avgR)}</td><td class="num">${pctSpan(avgB)}</td><td class="num">${pctSpan(avgA)}</td><td colspan="2"></td></tr>`:"";
-  const desc=`<div class="desc">${openMode?"Open calls, marked-to-market.":"Closed calls, realized."} Return = stock; vs Index = ${esc(bench)} over the same dates; +/− = alpha. Hit/miss on alpha (Hold excluded).</div>`;
-  const body=rows.length?rows.map(x=>callRow(x,openMode)).join(""):emptyRow(11,openMode?"No open calls.":"No closed trades yet.");
-  return desc+`<div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody>${foot?`<tfoot>${foot}</tfoot>`:""}</table></div>`+
-    (openMode?`<div class="addbar"><button class="btn sm" data-addcall>+ Add call</button><span class="small">New call is attributed to ${esc(analystName(selAnalyst))}. Set an exit date to move it to Historical Trades. Ticker = Yahoo symbol with exchange suffix (2330.TW · 0700.HK · RELIANCE.NS · 005930.KS · AAPL).</span></div>`:"");
+function alphaOpenTable(rows){
+  const head=`<tr><th>Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Call</th><th class="num">Entry cost</th><th class="num">Return</th><th class="num">Index return</th><th class="num">Return vs index</th><th class="num">Result</th><th>Close</th></tr>`;
+  const a=aggr(rows);
+  const foot=rows.length?`<tr class="subtotal"><td colspan="4">Open · ${rows.length} · Hit rate ${a.hitTxt}</td><td></td><td class="num">${pctSpan(a.avgR)}</td><td class="num">${pctSpan(a.avgB)}</td><td class="num">${pctSpan(a.avgA)}</td><td colspan="2"></td></tr>`:"";
+  const body=rows.length?rows.map(alphaOpenRow).join(""):emptyRow(10,"No open calls yet — click + Add call.");
+  return `<div class="desc">Key in <b>Entry date</b> → <b>Ticker</b> and the row auto-fills. Entry cost = closing price on the entry date · Return = today ÷ entry cost · Index return = that market's index · Return vs index = alpha. Hit/miss on alpha (Hold excluded; <b>*</b> = open, marked-to-market).</div>
+    <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody>${foot?`<tfoot>${foot}</tfoot>`:""}</table></div>
+    <div class="addbar"><button class="btn sm" data-addcall>+ Add call</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Ticker = Yahoo symbol with suffix (2330.TW · 0700.HK · RELIANCE.NS · 005930.KS). A new ticker shows values after Publish.</span></div>`;
+}
+function alphaClosedTable(rows){
+  if(!rows.length) return `<div style="margin-top:20px" class="desc"><b>Closed calls</b> — none yet. Use the <b>Close</b> button on an open call.</div>`;
+  const head=`<tr><th>Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Call</th><th class="num">Entry cost</th><th>Exit date</th><th class="num">Exit price</th><th class="num">Return</th><th class="num">Index return</th><th class="num">Return vs index</th><th class="num">Result</th><th></th></tr>`;
+  const a=aggr(rows);
+  const foot=`<tr class="subtotal"><td colspan="4">Realized · ${rows.length} · Hit rate ${a.hitTxt}</td><td colspan="3"></td><td class="num">${pctSpan(a.avgR)}</td><td class="num">${pctSpan(a.avgB)}</td><td class="num">${pctSpan(a.avgA)}</td><td colspan="2"></td></tr>`;
+  return `<div style="margin-top:24px" class="desc"><b>Closed calls</b> — realized (return uses the exit-date close). Clear an exit date to reopen a call.</div>
+    <div class="tw"><table><thead>${head}</thead><tbody>${rows.map(alphaClosedRow).join("")}</tbody><tfoot>${foot}</tfoot></table></div>`;
 }
 function coverageTable(sum){
   const byTk={};
@@ -317,7 +342,7 @@ function coverageTable(sum){
     <tbody>${rows||emptyRow(6,"No coverage yet.")}</tbody></table></div>`;
 }
 function stockCell(o){
-  return `<td><div style="display:flex;gap:6px;align-items:center"><input class="cell" data-f="name" style="flex:1;min-width:118px" value="${esc(o.name||"")}" placeholder="Company"><input class="cell" data-f="ticker" style="flex:0 0 120px;text-align:left;font-family:var(--mono)" value="${esc(o.ticker||"")}" placeholder="TICKER.XX">${o.ticker?`<span class="link" data-chart="${esc(o.ticker)}" data-nm="${esc(o.name)}" title="price chart">📈</span>`:""}</div></td>`;
+  return `<td><div style="display:flex;gap:6px;align-items:center"><input class="cell" data-f="name" style="flex:1;min-width:118px" value="${esc(o.name||"")}" placeholder="Company"><input class="cell" data-f="ticker" style="flex:0 0 120px;text-align:left;font-family:var(--mono)" value="${esc(o.ticker||"")}" placeholder="TICKER.XX"></div></td>`;
 }
 function resultBadge(r,open){ if(r==="HIT")return `<span class="badge hit">HIT${open?"*":""}</span>`; if(r==="MISS")return `<span class="badge miss">MISS${open?"*":""}</span>`; if(r==="hold")return '<span class="badge na">HOLD</span>'; return '<span class="badge na">–</span>'; }
 function callSelect(v){return `<select class="cell w-xs" data-f="call">`+["Buy","Sell","Hold"].map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")+"</select>";}
@@ -350,7 +375,7 @@ function renderHoldings(){
 
 /* ---------- editing / events ---------- */
 const NUMF=new Set(["entry","exit","target"]);
-const RENDER_ON=new Set(["call","entry","entryDate","exitDate"]);
+const RENDER_ON=new Set(["call","entry","entryDate","exitDate","ticker"]);
 function wire(){
   const v=document.getElementById("views");
   v.querySelectorAll(".seg [data-analyst]").forEach(b=>b.onclick=()=>{ if(b.dataset.analyst==="__new"){addAnalyst();return;} selAnalyst=b.dataset.analyst; section="calls"; syncHash(); render(); });
@@ -361,12 +386,13 @@ function wire(){
     let val=e.target.value;
     if(NUMF.has(f)) val=val===""?null:parseFloat(val);
     if(f==="exitDate"&&val==="") val=null;
-    obj[f]=val; if(f==="ticker"){obj.country=countryFromTicker(val)||obj.country; obj.currency=ccyFromTicker(val);}
+    obj[f]=val; if(f==="ticker"){obj.country=countryFromTicker(val)||obj.country; obj.currency=ccyFromTicker(val); if(!obj.name){const q=quote(val); if(q&&q.name) obj.name=q.name;}}
     save(); if(RENDER_ON.has(f)) render();
   }));
   v.querySelectorAll("[data-del]").forEach(d=>d.onclick=e=>{const tr=e.target.closest("tr"); BOOK[tr.dataset.coll]=BOOK[tr.dataset.coll].filter(o=>o.id!==tr.dataset.id); save(); render();});
   const addC=v.querySelector("[data-addcall]"); if(addC) addC.onclick=addCall;
   const addH=v.querySelector("[data-addhold]"); if(addH) addH.onclick=addHolding;
+  v.querySelectorAll("[data-close]").forEach(b=>b.onclick=e=>closeCallModal(e.target.closest("tr").dataset.id));
   v.querySelectorAll("[data-chart]").forEach(s=>s.onclick=()=>openChart(s.dataset.chart,s.dataset.nm));
   const pdfBtn=v.querySelector("#btnPdf"), pdfIn=v.querySelector("#pdfInput");
   if(pdfBtn&&pdfIn){ pdfBtn.onclick=()=>pdfIn.click(); pdfIn.onchange=e=>{const f=e.target.files[0]; if(f) handlePdf(f); e.target.value="";}; }
@@ -374,6 +400,17 @@ function wire(){
 function addAnalyst(){const nm=prompt("Analyst name:"); if(!nm)return; const id="a-"+Date.now().toString(36); BOOK.analysts.push({id,name:nm,note:""}); selAnalyst=id; section="calls"; save(); render();}
 function addCall(){const id="c-"+Date.now().toString(36); BOOK.calls.push({id,analyst:selAnalyst,name:"",ticker:"",call:"Buy",entry:null,entryDate:new Date().toISOString().slice(0,10),exit:null,exitDate:null,source:"",notes:""}); save(); render();}
 function addHolding(){const id="h-"+Date.now().toString(36); BOOK.holdings.push({id,name:"",ticker:"",country:"IN",currency:"INR",entry:null,entryDate:"",source:"",notes:""}); save(); render();}
+function closeCallModal(id){
+  const c=(BOOK.calls||[]).find(o=>o.id===id); if(!c) return;
+  const today=new Date().toISOString().slice(0,10);
+  const root=document.getElementById("modalRoot");
+  root.innerHTML=`<div class="modal"><div class="box"><span class="x" id="mx">×</span><h3>Close call — ${esc(c.name||c.ticker||"")}</h3>
+    <div class="small">${esc(c.ticker||"")} · ${esc(c.call||"")} · entered ${esc(c.entryDate||"—")}. Exit price = the closing price on the exit date.</div>
+    <div class="field"><label>Exit date</label><input id="closeDate" type="date" value="${today}" max="${today}"></div>
+    <div class="addbar"><button class="btn gold" id="closeGo">Close call</button><button class="btn ghost" id="closeCancel">Cancel</button></div></div></div>`;
+  root.querySelector("#mx").onclick=root.querySelector("#closeCancel").onclick=()=>root.innerHTML="";
+  root.querySelector("#closeGo").onclick=()=>{const d=root.querySelector("#closeDate").value; if(!d){alert("Pick an exit date.");return;} c.exitDate=d; save(); root.innerHTML=""; render();};
+}
 
 /* ---------- price chart modal ---------- */
 function openChart(sym,nm){

@@ -159,6 +159,7 @@ def summarize(meta, cmap):
         "price": round(price, 4),
         "prevClose": round(prev, 4) if prev else None,
         "currency": meta.get("currency"),
+        "name": meta.get("longName") or meta.get("shortName"),
         "d1": pct(last, prev),
         "w1": pct(last, on_or_before(dates[:-1], cmap, ago(7))),
         "m1": pct(last, on_or_before(dates[:-1], cmap, ago(30))),
