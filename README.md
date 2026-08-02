@@ -15,10 +15,12 @@ auto-save to the cloud. Prices are indicative (delayed ~15 min via the Worker's 
     Columns: Entry date · Ticker · Stock · Call · Entry cost · Return · Index return · Return vs
     index · Result · Close.
   - **Coverage List** — an editable list you key in yourself (independent of Alpha): Ticker · Stock ·
-    Rating · Last price · Return (YTD) · vs Index (YTD). Click **💬** on any name to record the
-    rationale/thesis readers see.
-  - **Rationale (💬)** — every Alpha call and coverage name has a 💬 you click to write/read the
-    reasoning behind it (gold when a thesis is set, muted when empty).
+    **Rating** (OW / N / UW) · Last price · **Total return** · vs Index · **History** · **Comment**.
+    Each covered stock keeps its own dated **rating-change history**; open **History** (▸) to log
+    stance changes and see the stock's return *during each stance* (absolute and vs index). **Total
+    return** = the stock's return since first covered (the per-stance returns compound into it).
+  - **Comment (💬)** — every Alpha call and coverage name has a 💬 you click to write/read the
+    thesis behind it (gold when set, muted when empty).
 - **Holdings** — positions grouped by **country** (HK · China · India · Taiwan · Korea · ASEAN):
   Stock · **Cost** · LTP · 1D · 1W · 1M · YTD · Return. Upload a statement **PDF** to auto-fill.
 
@@ -43,9 +45,11 @@ one-time deploy.
   return and result fill in automatically. Click **Close** (pick an exit date) to move it to the
   Closed table. Everything auto-saves to the cloud.
 - **A coverage name:** Analysts → pick the analyst → **Coverage List** → **＋ Add name** → type the
-  Ticker (dropdown) and set the **Rating**. Stock, last price and YTD returns fill in automatically.
-  This list is independent of your timed Alpha calls.
-- **A rationale:** click the **💬** on any Alpha call or coverage name, type the thesis, **Save**.
+  Ticker (dropdown) and set the **Rating** (OW / N / UW). Open **History** (▸) → **＋ Add rating
+  change** to log a dated stance (back-date it to backtest); the return during each stance and the
+  total since first covered compute automatically. Independent of your timed Alpha calls.
+- **A comment/rationale:** click the **💬 Comment** on any coverage name (or 💬 on an Alpha call),
+  type the thesis, **Save**.
 - **A holding:** **Holdings** → **＋ Add holding** → type the ticker (dropdown) + cost; or upload a
   statement PDF and review.
 - **Save passphrase:** the first time you edit, you're asked once for the Worker's `WRITE_TOKEN`
