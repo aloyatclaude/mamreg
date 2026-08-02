@@ -290,13 +290,16 @@ async function ensurePriced(ticker){
   if(!ticker) return;
   const need=[ticker,benchFromTicker(ticker)].filter(s=>s&&!PRICES.closes[s]);
   if(need.length) await Promise.all(need.map(fetchChart));
-  // a typed symbol that can't be priced (e.g. bare "2330") → resolve to its full Yahoo symbol
+  // a typed symbol that can't be priced (e.g. bare "2330") → adopt ONLY if there is a single
+  // unambiguous listing. If a bare code exists on several exchanges (e.g. 6951 = JP/HK/TW),
+  // never guess — leave it unresolved so the user picks the exact listing from the dropdown.
   if(!PRICES.closes[ticker] && !_triedResolve.has(ticker)){
     _triedResolve.add(ticker);
     try{
       const res=await fetch(`${WORKER}/search?q=${encodeURIComponent(ticker)}`).then(r=>r.ok?r.json():[]);
-      const top=(res||[]).find(x=>["EQUITY","ETF","INDEX"].includes(x.type));
-      if(top&&top.symbol&&top.symbol!==ticker){
+      const cands=(res||[]).filter(x=>["EQUITY","ETF"].includes(x.type));
+      if(cands.length===1 && cands[0].symbol!==ticker){
+        const top=cands[0];
         [...(BOOK.calls||[]),...(BOOK.holdings||[])].forEach(o=>{ if(o.ticker===ticker){ o.ticker=top.symbol; o.country=countryFromTicker(top.symbol); o.currency=ccyFromTicker(top.symbol); if(!o.name)o.name=top.name; } });
         save(); return ensurePriced(top.symbol);
       }
@@ -417,7 +420,7 @@ function alphaOpenRow(x){
     <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(c.ticker||"")}" placeholder="TICKER.XX"></td>
     <td><input class="cell" data-f="name" style="min-width:140px;text-align:left;font-family:'Manrope'" value="${esc(c.name||"")}" placeholder="(auto)"></td>
     <td>${callSelect(c.call)}</td>
-    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?`<span class="down" style="font-size:11px" title="Symbol not found — pick from the ticker dropdown">⚠ check</span>`:"–")}</td>
+    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?`<span class="down" style="font-size:11px" title="Type in the Ticker box and pick the exact listing (with its exchange) from the dropdown">⚠ pick</span>`:"–")}</td>
     <td class="num">${pctSpan(s.stockRet)}</td>
     ${idxCell(s)}
     <td class="num">${pctSpan(s.alpha)}</td>
@@ -431,7 +434,7 @@ function alphaClosedRow(x){
     <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(c.ticker||"")}"></td>
     <td><input class="cell" data-f="name" style="min-width:140px;text-align:left;font-family:'Manrope'" value="${esc(c.name||"")}"></td>
     <td>${callSelect(c.call)}</td>
-    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?`<span class="down" style="font-size:11px" title="Symbol not found — pick from the ticker dropdown">⚠ check</span>`:"–")}</td>
+    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?`<span class="down" style="font-size:11px" title="Type in the Ticker box and pick the exact listing (with its exchange) from the dropdown">⚠ pick</span>`:"–")}</td>
     <td><input class="cell w-dt" data-f="exitDate" type="date" value="${esc(c.exitDate||"")}"></td>
     <td class="num">${s.exitPx!=null?money(s.exitPx,ccy):"–"}</td>
     <td class="num">${pctSpan(s.stockRet)}</td>
@@ -549,25 +552,38 @@ function closeCallModal(id){
 }
 
 /* ---------- ticker search dropdown (live via Worker) ---------- */
-let _dd=null,_ddT=null;
-function ensureDD(){ if(!_dd){ _dd=document.createElement("div"); _dd.id="tickerDD"; _dd.style.cssText="position:absolute;z-index:90;display:none;background:var(--surface);border:1px solid var(--border-2);border-radius:9px;box-shadow:0 10px 28px rgba(0,0,0,.45);max-height:260px;overflow:auto;font-size:13px"; document.body.appendChild(_dd); window.addEventListener("scroll",hideDD,true); } return _dd; }
-function hideDD(){ if(_dd)_dd.style.display="none"; }
+let _dd=null,_ddT=null,_ddItems=[],_ddIdx=-1;
+function ensureDD(){ if(!_dd){ _dd=document.createElement("div"); _dd.id="tickerDD"; _dd.style.cssText="position:absolute;z-index:90;display:none;background:var(--surface);border:1px solid var(--border-2);border-radius:9px;box-shadow:0 10px 28px rgba(0,0,0,.45);max-height:290px;overflow:auto;font-size:13px"; document.body.appendChild(_dd); window.addEventListener("scroll",hideDD,true); } return _dd; }
+function hideDD(){ if(_dd)_dd.style.display="none"; _ddIdx=-1; }
+function hlDD(){ if(!_dd)return; _dd.querySelectorAll("[data-idx]").forEach((el,i)=>{ el.style.background = i===_ddIdx?"var(--accent-dim)":"transparent"; }); const cur=_dd.querySelector(`[data-idx="${_ddIdx}"]`); if(cur) cur.scrollIntoView({block:"nearest"}); }
 function attachTickerSearch(){
   document.querySelectorAll('input.cell[data-f="ticker"]').forEach(inp=>{
     inp.setAttribute("autocomplete","off");
     inp.addEventListener("input",()=>{ clearTimeout(_ddT); const q=inp.value.trim(); if(!q){hideDD();return;} _ddT=setTimeout(()=>runSearch(inp,q),250); });
-    inp.addEventListener("keydown",e=>{ if(e.key==="Escape")hideDD(); if(e.key==="Enter"){ const f=_dd&&_dd.style.display!=="none"&&_dd.querySelector("[data-sym]"); if(f){e.preventDefault(); f.dispatchEvent(new Event("mousedown"));} } });
+    inp.addEventListener("focus",()=>{ const q=inp.value.trim(); if(q){ clearTimeout(_ddT); _ddT=setTimeout(()=>runSearch(inp,q),200); } });
+    inp.addEventListener("keydown",e=>{
+      const open=_dd&&_dd.style.display!=="none"&&_ddItems.length;
+      if(e.key==="Escape"){ hideDD(); return; }
+      if(!open) return;
+      if(e.key==="ArrowDown"){ e.preventDefault(); _ddIdx=Math.min(_ddIdx+1,_ddItems.length-1); hlDD(); }
+      else if(e.key==="ArrowUp"){ e.preventDefault(); _ddIdx=Math.max(_ddIdx-1,-1); hlDD(); }
+      else if(e.key==="Enter"){ let i=_ddIdx; if(i<0&&_ddItems.length===1) i=0; if(i>=0){ e.preventDefault(); pickTicker(inp,_ddItems[i].symbol,_ddItems[i].name); } }
+    });
     inp.addEventListener("blur",()=>setTimeout(hideDD,150));
   });
 }
 async function runSearch(inp,q){
   let items=[]; try{ const r=await fetch(`${WORKER}/search?q=${encodeURIComponent(q)}`); if(r.ok)items=await r.json(); }catch(e){}
+  _ddItems=items; _ddIdx=-1;
   const dd=ensureDD();
-  dd.innerHTML = items.length ? items.map(it=>`<div data-sym="${esc(it.symbol)}" data-nm="${esc(it.name)}" style="padding:7px 11px;cursor:pointer;display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid var(--border)"><span><b style="font-family:var(--mono)">${esc(it.symbol)}</b> <span style="color:var(--text-2)">${esc(it.name)}</span></span><span style="color:var(--muted);font-size:11px">${esc(it.exchange)}</span></div>`).join("")
-    : `<div style="padding:8px 11px;color:var(--muted)">No matches for “${esc(q)}”</div>`;
-  const r=inp.getBoundingClientRect();
-  dd.style.left=(r.left+scrollX)+"px"; dd.style.top=(r.bottom+scrollY+3)+"px"; dd.style.minWidth=Math.max(r.width,280)+"px"; dd.style.display="block";
-  dd.querySelectorAll("[data-sym]").forEach(row=>row.addEventListener("mousedown",e=>{ e.preventDefault(); pickTicker(inp,row.dataset.sym,row.dataset.nm); }));
+  dd.innerHTML = items.length ? items.map((it,i)=>`<div data-idx="${i}" style="padding:7px 11px;cursor:pointer;display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid var(--border)"><span><b style="font-family:var(--mono)">${esc(it.symbol)}</b> <span style="color:var(--text-2)">${esc(it.name)}</span></span><span style="color:var(--muted);font-size:11px">${esc(it.exchange)}</span></div>`).join("")
+    : `<div style="padding:8px 11px;color:var(--muted)">No matches for “${esc(q)}” — check the code</div>`;
+  const rct=inp.getBoundingClientRect();
+  dd.style.left=(rct.left+scrollX)+"px"; dd.style.top=(rct.bottom+scrollY+3)+"px"; dd.style.minWidth=Math.max(rct.width,300)+"px"; dd.style.display="block";
+  dd.querySelectorAll("[data-idx]").forEach(row=>{ const i=+row.dataset.idx;
+    row.addEventListener("mousedown",e=>{ e.preventDefault(); pickTicker(inp,_ddItems[i].symbol,_ddItems[i].name); });
+    row.addEventListener("mouseenter",()=>{ _ddIdx=i; hlDD(); });
+  });
 }
 function pickTicker(inp,sym,name){
   const tr=inp.closest("tr"); if(!tr)return; const obj=(BOOK[tr.dataset.coll]||[]).find(o=>o.id===tr.dataset.id); if(!obj)return;
