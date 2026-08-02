@@ -5,7 +5,7 @@ compatibility_date = "2024-11-01"
 # Create with:  npx wrangler kv namespace create BOOK_KV
 # then paste the printed id below (a local id is auto-used by `wrangler dev`).
 kv_namespaces = [
-  { binding = "BOOK_KV", id = "REPLACE_WITH_KV_ID" }
+  { binding = "BOOK_KV", id = "ebbe62066ec7423ba2da2af337a65ffc" }
 ]
 
 # WRITE_TOKEN is a secret:
