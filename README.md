@@ -14,7 +14,11 @@ auto-save to the cloud. Prices are indicative (delayed ~15 min via the Worker's 
   - **Alpha** — open calls on top, **Closed calls** table below (with exit date + exit price).
     Columns: Entry date · Ticker · Stock · Call · Entry cost · Return · Index return · Return vs
     index · Result · Close.
-  - **Coverage List** — the distinct names covered, with latest stance, price, #calls and hit rate.
+  - **Coverage List** — an editable list you key in yourself (independent of Alpha): Ticker · Stock ·
+    Rating · Last price · Return (YTD) · vs Index (YTD). Click **💬** on any name to record the
+    rationale/thesis readers see.
+  - **Rationale (💬)** — every Alpha call and coverage name has a 💬 you click to write/read the
+    reasoning behind it (gold when a thesis is set, muted when empty).
 - **Holdings** — positions grouped by **country** (HK · China · India · Taiwan · Korea · ASEAN):
   Stock · **Cost** · LTP · 1D · 1W · 1M · YTD · Return. Upload a statement **PDF** to auto-fill.
 
@@ -38,6 +42,10 @@ one-time deploy.
   then **type in the Ticker box** and pick from the live dropdown. Name, entry cost, return, index
   return and result fill in automatically. Click **Close** (pick an exit date) to move it to the
   Closed table. Everything auto-saves to the cloud.
+- **A coverage name:** Analysts → pick the analyst → **Coverage List** → **＋ Add name** → type the
+  Ticker (dropdown) and set the **Rating**. Stock, last price and YTD returns fill in automatically.
+  This list is independent of your timed Alpha calls.
+- **A rationale:** click the **💬** on any Alpha call or coverage name, type the thesis, **Save**.
 - **A holding:** **Holdings** → **＋ Add holding** → type the ticker (dropdown) + cost; or upload a
   statement PDF and review.
 - **Save passphrase:** the first time you edit, you're asked once for the Worker's `WRITE_TOKEN`

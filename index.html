@@ -194,7 +194,7 @@ async function load(){
   }catch(e){}
   if(!book){ const ls=localStorage.getItem(LS_BOOK); if(ls){ try{book=JSON.parse(ls);}catch(e){} } }
   BOOK=book?book:structuredClone(SEED);
-  if(!BOOK.holdings)BOOK.holdings=[]; if(!BOOK.calls)BOOK.calls=[]; if(!BOOK.analysts)BOOK.analysts=[];
+  if(!BOOK.holdings)BOOK.holdings=[]; if(!BOOK.calls)BOOK.calls=[]; if(!BOOK.analysts)BOOK.analysts=[]; if(!BOOK.coverage)BOOK.coverage=[];
   lastSynced=structuredClone(BOOK);
   loadCachedPrices();
   parseHash();
@@ -204,7 +204,7 @@ async function load(){
   const lb=document.getElementById("lockBtn"); if(lb) lb.onclick=e=>{e.preventDefault(); if(_poll)clearInterval(_poll); localStorage.removeItem(LS_TOKEN); showGate("Locked. Enter the password to continue.");};
   await priceAll(); render();
   // auto-resolve any already-saved rows whose ticker can't be priced (e.g. bare codes typed earlier)
-  for(const t of [...new Set([...BOOK.calls,...BOOK.holdings].map(o=>o.ticker).filter(t=>t&&!PRICES.closes[t]))]) await ensurePriced(t);
+  for(const t of [...new Set([...BOOK.calls,...BOOK.holdings,...BOOK.coverage].map(o=>o.ticker).filter(t=>t&&!PRICES.closes[t]))]) await ensurePriced(t);
   startPolling();
   if(qs.has("pdftest")) setTimeout(()=>reviewHoldings(parseHoldingsText(SAMPLE_STMT),"self-test sample"),300);
   if(qs.get("ddtest")) setTimeout(async()=>{ addCall(); const inp=document.querySelector('input.cell[data-f="ticker"]'); if(inp){ inp.focus(); inp.value=qs.get("ddtest"); await runSearch(inp,qs.get("ddtest")); } },500);
@@ -281,7 +281,7 @@ async function fetchChart(sym){
   }catch(e){}
 }
 function neededSymbols(){ const s=new Set();
-  [...(BOOK.holdings||[]),...(BOOK.calls||[])].forEach(o=>{ if(o.ticker){ s.add(o.ticker); s.add(benchFromTicker(o.ticker)); } });
+  [...(BOOK.holdings||[]),...(BOOK.calls||[]),...(BOOK.coverage||[])].forEach(o=>{ if(o.ticker){ s.add(o.ticker); s.add(benchFromTicker(o.ticker)); } });
   return [...s].filter(x=>x&&!PRICES.closes[x]); }
 async function priceAll(){ const list=neededSymbols(); const C=6;
   for(let i=0;i<list.length;i+=C){ await Promise.all(list.slice(i,i+C).map(fetchChart)); } cachePrices(); }
@@ -300,13 +300,13 @@ async function ensurePriced(ticker){
       const cands=(res||[]).filter(x=>["EQUITY","ETF"].includes(x.type));
       if(cands.length===1 && cands[0].symbol!==ticker){
         const top=cands[0];
-        [...(BOOK.calls||[]),...(BOOK.holdings||[])].forEach(o=>{ if(o.ticker===ticker){ o.ticker=top.symbol; o.country=countryFromTicker(top.symbol); o.currency=ccyFromTicker(top.symbol); if(!o.name)o.name=top.name; } });
+        [...(BOOK.calls||[]),...(BOOK.holdings||[]),...(BOOK.coverage||[])].forEach(o=>{ if(o.ticker===ticker){ o.ticker=top.symbol; o.country=countryFromTicker(top.symbol); o.currency=ccyFromTicker(top.symbol); if(!o.name)o.name=top.name; } });
         save(); return ensurePriced(top.symbol);
       }
     }catch(e){}
   }
   const q=PRICES.quotes[ticker];
-  if(q&&q.name){ [...(BOOK.calls||[]),...(BOOK.holdings||[])].forEach(o=>{ if(o.ticker===ticker&&!o.name)o.name=q.name; }); }
+  if(q&&q.name){ [...(BOOK.calls||[]),...(BOOK.holdings||[]),...(BOOK.coverage||[])].forEach(o=>{ if(o.ticker===ticker&&!o.name)o.name=q.name; }); }
   cachePrices(); save(); render();
 }
 function cachePrices(){ try{ localStorage.setItem(LS_PRICES,JSON.stringify({t:Date.now(),quotes:PRICES.quotes,closes:PRICES.closes})); }catch(e){} }
@@ -399,7 +399,7 @@ function renderAnalysts(){
   </div>`;
   if(!["calls","coverage"].includes(section)) section="calls";
   const segs=`<div class="seg small">${[["calls","Alpha"],["coverage","Coverage List"]].map(s=>`<button class="${s[0]===section?"on":""}" data-section="${s[0]}">${s[1]}</button>`).join("")}</div>`;
-  const body = section==="coverage" ? coverageTable(sum) : (alphaOpenTable(sum.open)+alphaClosedTable(sum.closed));
+  const body = section==="coverage" ? coverageTable() : (alphaOpenTable(sum.open)+alphaClosedTable(sum.closed));
   return tabs+tiles+`<div class="panel">${segs}${body}</div>`;
 }
 function idxCell(s){
@@ -433,7 +433,7 @@ function alphaOpenRow(x){
     ${idxCell(s)}
     <td class="num">${pctSpan(s.alpha)}</td>
     <td class="num">${resultBadge(s.result,true)}</td>
-    <td style="white-space:nowrap"><button class="btn sm" data-close>Close</button> <span class="del" data-del>✕</span></td></tr>`;
+    <td style="white-space:nowrap">${noteIcon("calls",c)} <button class="btn sm" data-close>Close</button> <span class="del" data-del>✕</span></td></tr>`;
 }
 function alphaClosedRow(x){
   const c=x.c,s=x.s, ccy=ccyFromTicker(c.ticker);
@@ -449,7 +449,7 @@ function alphaClosedRow(x){
     ${idxCell(s)}
     <td class="num">${pctSpan(s.alpha)}</td>
     <td class="num">${resultBadge(s.result,false)}</td>
-    <td><span class="del" data-del>✕</span></td></tr>`;
+    <td style="white-space:nowrap">${noteIcon("calls",c)} <span class="del" data-del>✕</span></td></tr>`;
 }
 function alphaOpenTable(rows){
   const head=`<tr><th>Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Call</th><th class="num">Entry cost</th><th class="num">Last price</th><th class="num">Return</th><th class="num">Index return</th><th class="num">Return vs index</th><th class="num">Result</th><th>Close</th></tr>`;
@@ -468,23 +468,47 @@ function alphaClosedTable(rows){
   return `<div style="margin-top:24px" class="desc"><b>Closed calls</b> — realized (return uses the exit-date close). Clear an exit date to reopen a call.</div>
     <div class="tw"><table><thead>${head}</thead><tbody>${rows.map(alphaClosedRow).join("")}</tbody><tfoot>${foot}</tfoot></table></div>`;
 }
-function coverageTable(sum){
-  const byTk={};
-  sum.calls.forEach(x=>{const k=x.c.ticker;(byTk[k]||(byTk[k]={name:x.c.name,ticker:k,items:[]})).items.push(x);});
-  const rows=Object.values(byTk).map(g=>{
-    const latest=g.items.slice().sort((a,b)=>(b.c.entryDate||"").localeCompare(a.c.entryDate||""))[0];
-    const scored=g.items.filter(x=>x.s.result==="HIT"||x.s.result==="MISS");
-    const hits=scored.filter(x=>x.s.result==="HIT").length;
-    return `<tr><td><span class="name link" data-chart="${esc(g.ticker)}" data-nm="${esc(g.name)}">${esc(g.name)}</span><span class="tk">${esc(g.ticker)}</span></td>
-      <td><span class="pill ${(latest.c.call||"").toLowerCase()}">${esc(latest.c.call)}</span></td>
-      <td class="num">${money(livePrice(g.ticker),ccyFromTicker(g.ticker))}</td>
-      <td class="num">${g.items.length}</td>
-      <td class="num">${pctSpan(latest.s.alpha)}</td>
-      <td class="num">${scored.length?Math.round(100*hits/scored.length)+"%":"–"}</td></tr>`;
-  }).join("");
-  return `<div class="desc">Distinct names ${esc(analystName(selAnalyst))} covers — latest stance, price, calls made and hit rate.</div>
-    <div class="tw"><table><thead><tr><th>Stock</th><th>Latest</th><th class="num">Price</th><th class="num">Calls</th><th class="num">Latest α</th><th class="num">Hit rate</th></tr></thead>
-    <tbody>${rows||emptyRow(6,"No coverage yet.")}</tbody></table></div>`;
+function coverageRow(o){
+  const ccy=ccyFromTicker(o.ticker), px=livePrice(o.ticker), q=quote(o.ticker)||{}, bench=benchFromTicker(o.ticker), bq=quote(bench)||{};
+  const vs=(q.ytd!=null&&bq.ytd!=null)?q.ytd-bq.ytd:null;
+  const benchNm=BENCH_NAME[bench]||"";
+  return `<tr data-id="${o.id}" data-coll="coverage">
+    <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(o.ticker||"")}" placeholder="TICKER.XX"></td>
+    <td><input class="cell" data-f="name" style="min-width:150px;text-align:left;font-family:'Manrope'" value="${esc(o.name||"")}" placeholder="(auto)"></td>
+    <td>${ratingSelect(o.rating)}</td>
+    <td class="num">${px!=null?money(px,ccy):"–"}</td>
+    <td class="num">${pctSpanRaw(q.ytd)}</td>
+    <td class="num">${vs==null?'<span class="flat">–</span>':pctSpanRaw(vs)}${vs!=null&&benchNm?` <span class="tag">${esc(benchNm)}</span>`:""}</td>
+    <td class="num">${noteIcon("coverage",o)}</td>
+    <td><span class="del" data-del>✕</span></td></tr>`;
+}
+function coverageTable(){
+  const rows=(BOOK.coverage||[]).filter(o=>o.analyst===selAnalyst);
+  const head=`<tr><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Rating</th><th class="num">Last price</th><th class="num">Return (YTD)</th><th class="num">vs Index (YTD)</th><th class="num">💬</th><th></th></tr>`;
+  const body=rows.length?rows.map(coverageRow).join(""):emptyRow(8,"No coverage yet — click + Add name.");
+  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. <b>Return (YTD)</b> = year-to-date price change · <b>vs Index (YTD)</b> = that market's index YTD subtracted. Click <b>💬</b> to record the rationale readers will see.</div>
+    <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>
+    <div class="addbar"><button class="btn sm" data-addcov>+ Add name</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search — name, price and YTD returns fill in automatically. This is a plain coverage list, separate from your timed Alpha calls.</span></div>`;
+}
+function ratingSelect(v){return `<select class="cell" style="width:92px" data-f="rating">`+["Buy","Add","Hold","Reduce","Sell"].map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")+"</select>";}
+function noteIcon(coll,o){
+  const has=!!(o.rationale&&o.rationale.trim());
+  const t=has?esc(o.rationale.trim().slice(0,160)):"Add the rationale / thesis";
+  return `<span data-note data-ncoll="${coll}" data-nid="${o.id}" title="${t}" style="cursor:pointer;font-size:15px;${has?"filter:none":"opacity:.35;filter:grayscale(1)"}">💬</span>`;
+}
+function rationaleModal(coll,id){
+  const obj=(BOOK[coll]||[]).find(o=>o.id===id); if(!obj) return;
+  const root=document.getElementById("modalRoot");
+  const label=obj.name||obj.ticker||"this call";
+  const kind=coll==="coverage"?"name":"call";
+  root.innerHTML=`<div class="modal"><div class="box"><span class="x" id="mx">×</span><h3>Rationale — ${esc(label)}</h3>
+    <div class="small">${esc(obj.ticker||"")} — the thesis behind this ${kind}. Readers see this when they open 💬.</div>
+    <div class="field"><textarea id="ratTxt" rows="8" style="width:100%;background:var(--surface-2);border:1px solid var(--border-2);color:var(--text);padding:9px 11px;border-radius:8px;font:inherit;font-size:13px;line-height:1.5;resize:vertical" placeholder="Why this call? Catalyst, valuation, risks, what would change your mind…">${esc(obj.rationale||"")}</textarea></div>
+    <div class="addbar"><button class="btn gold" id="ratSave">Save</button><button class="btn ghost" id="ratCancel">Cancel</button></div></div></div>`;
+  root.querySelector("#mx").onclick=root.querySelector("#ratCancel").onclick=()=>root.innerHTML="";
+  root.querySelector(".modal").onclick=e=>{if(e.target.classList.contains("modal"))root.innerHTML="";};
+  root.querySelector("#ratSave").onclick=()=>{ obj.rationale=root.querySelector("#ratTxt").value; save(); root.innerHTML=""; render(); };
+  setTimeout(()=>{const t=root.querySelector("#ratTxt"); if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length);}},30);
 }
 function stockCell(o){
   return `<td><div style="display:flex;gap:6px;align-items:center"><input class="cell" data-f="name" style="flex:1;min-width:118px" value="${esc(o.name||"")}" placeholder="Company"><input class="cell" data-f="ticker" style="flex:0 0 120px;text-align:left;font-family:var(--mono)" value="${esc(o.ticker||"")}" placeholder="TICKER.XX"></div></td>`;
@@ -538,6 +562,8 @@ function wire(){
   v.querySelectorAll("[data-del]").forEach(d=>d.onclick=e=>{const tr=e.target.closest("tr"); BOOK[tr.dataset.coll]=BOOK[tr.dataset.coll].filter(o=>o.id!==tr.dataset.id); save(); render();});
   const addC=v.querySelector("[data-addcall]"); if(addC) addC.onclick=addCall;
   const addH=v.querySelector("[data-addhold]"); if(addH) addH.onclick=addHolding;
+  const addCov=v.querySelector("[data-addcov]"); if(addCov) addCov.onclick=addCoverage;
+  v.querySelectorAll("[data-note]").forEach(n=>n.onclick=e=>rationaleModal(n.dataset.ncoll,n.dataset.nid));
   v.querySelectorAll("[data-close]").forEach(b=>b.onclick=e=>closeCallModal(e.target.closest("tr").dataset.id));
   attachTickerSearch();
   v.querySelectorAll("[data-chart]").forEach(s=>s.onclick=()=>openChart(s.dataset.chart,s.dataset.nm));
@@ -545,7 +571,8 @@ function wire(){
   if(pdfBtn&&pdfIn){ pdfBtn.onclick=()=>pdfIn.click(); pdfIn.onchange=e=>{const f=e.target.files[0]; if(f) handlePdf(f); e.target.value="";}; }
 }
 function addAnalyst(){const nm=prompt("Analyst name:"); if(!nm)return; const id="a-"+Date.now().toString(36); BOOK.analysts.push({id,name:nm,note:""}); selAnalyst=id; section="calls"; save(); render();}
-function addCall(){const id="c-"+Date.now().toString(36); BOOK.calls.push({id,analyst:selAnalyst,name:"",ticker:"",call:"Buy",entry:null,entryDate:new Date().toISOString().slice(0,10),exit:null,exitDate:null,source:"",notes:""}); save(); render();}
+function addCall(){const id="c-"+Date.now().toString(36); BOOK.calls.push({id,analyst:selAnalyst,name:"",ticker:"",call:"Buy",entry:null,entryDate:new Date().toISOString().slice(0,10),exit:null,exitDate:null,source:"",notes:"",rationale:""}); save(); render();}
+function addCoverage(){const id="cov-"+Date.now().toString(36); BOOK.coverage.push({id,analyst:selAnalyst,ticker:"",name:"",rating:"Buy",rationale:""}); save(); render();}
 function addHolding(){const id="h-"+Date.now().toString(36); BOOK.holdings.push({id,name:"",ticker:"",country:"IN",currency:"INR",entry:null,entryDate:"",source:"",notes:""}); save(); render();}
 function closeCallModal(id){
   const c=(BOOK.calls||[]).find(o=>o.id===id); if(!c) return;

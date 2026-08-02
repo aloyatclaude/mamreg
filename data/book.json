@@ -24,9 +24,9 @@
     { "id": "h-tencent", "name": "Tencent", "ticker": "0700.HK", "country": "HK", "currency": "HKD", "entry": 620, "entryDate": "2026-04-10", "source": "sample", "notes": "sample non-India holding" }
   ],
   "calls": [
-    { "id": "c1", "analyst": "mark", "name": "Reliance Industries", "ticker": "RELIANCE.NS", "call": "Sell", "entry": 1317.20, "entryDate": "2026-07-20", "exit": null, "exitDate": null, "source": "", "notes": "" },
-    { "id": "c2", "analyst": "ang", "name": "Avenue Supermarts", "ticker": "DMART.NS", "call": "Buy", "entry": 3950.00, "entryDate": "2026-07-13", "exit": null, "exitDate": null, "source": "", "notes": "" },
-    { "id": "c3", "analyst": "aloy", "name": "GE Vernova T&D India", "ticker": "GVT&D.NS", "call": "Buy", "entry": 4350.00, "entryDate": "2026-05-19", "exit": null, "exitDate": null, "source": "", "notes": "" },
+    { "id": "c1", "analyst": "mark", "name": "Reliance Industries", "ticker": "RELIANCE.NS", "call": "Sell", "entry": 1317.20, "entryDate": "2026-07-20", "exit": null, "exitDate": null, "source": "", "notes": "", "rationale": "Retail margins peaking and Jio ARPU hikes now priced in; O2C spreads normalising after a strong run. Prefer to book gains and revisit below 1,150." },
+    { "id": "c2", "analyst": "ang", "name": "Avenue Supermarts", "ticker": "DMART.NS", "call": "Buy", "entry": 3950.00, "entryDate": "2026-07-13", "exit": null, "exitDate": null, "source": "", "notes": "", "rationale": "Same-store sales re-accelerating and store adds back on track; the recent de-rating on quick-commerce fears looks overdone for a category leader with the best unit economics." },
+    { "id": "c3", "analyst": "aloy", "name": "GE Vernova T&D India", "ticker": "GVT&D.NS", "call": "Buy", "entry": 4350.00, "entryDate": "2026-05-19", "exit": null, "exitDate": null, "source": "", "notes": "", "rationale": "Order book at a record on grid capex and export wins; operating leverage should keep margins expanding into FY27. Structural transmission upcycle, not a one-year trade." },
     { "id": "c4", "analyst": "mark", "name": "Amber Enterprises", "ticker": "AMBER.NS", "call": "Buy", "entry": 7158.00, "entryDate": "2026-05-19", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c5", "analyst": "ang", "name": "TVS Motor", "ticker": "TVSMOTOR.NS", "call": "Hold", "entry": 3492.90, "entryDate": "2026-05-14", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c6", "analyst": "aloy", "name": "State Bank of India", "ticker": "SBIN.NS", "call": "Buy", "entry": 1068.45, "entryDate": "2026-05-11", "exit": null, "exitDate": null, "source": "", "notes": "" },
@@ -46,5 +46,10 @@
     { "id": "c20", "analyst": "ang", "name": "Bajaj Auto", "ticker": "BAJAJ-AUTO.NS", "call": "Sell", "entry": 9365.00, "entryDate": "2026-01-09", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c21", "analyst": "aloy", "name": "Avenue Supermarts", "ticker": "DMART.NS", "call": "Buy", "entry": 4167.40, "entryDate": "2026-05-21", "exit": 3950.00, "exitDate": "2026-07-13", "source": "", "notes": "" },
     { "id": "c22", "analyst": "mark", "name": "Reliance Industries", "ticker": "RELIANCE.NS", "call": "Hold", "entry": 1313.00, "entryDate": "2026-04-27", "exit": 1317.20, "exitDate": "2026-07-21", "source": "", "notes": "" }
+  ],
+  "coverage": [
+    { "id": "cov-tsmc", "analyst": "mark", "ticker": "2330.TW", "name": "TSMC", "rating": "Buy", "rationale": "Structural AI-compute leader; leading-edge (N3/N2) demand and pricing power intact, and CoWoS packaging remains a bottleneck it controls. Core long-term hold in the coverage." },
+    { "id": "cov-tencent", "analyst": "ang", "ticker": "0700.HK", "name": "Tencent", "rating": "Add", "rationale": "Games recovery plus ad monetisation of Video Accounts; buybacks support the floor and the AI/cloud optionality is a free call at this valuation." },
+    { "id": "cov-sbin", "analyst": "aloy", "ticker": "SBIN.NS", "name": "State Bank of India", "rating": "Buy", "rationale": "Cheapest large-cap PSU bank on book; asset quality clean, credit growth steady and ROE re-rating still has room versus private peers." }
   ]
 }
