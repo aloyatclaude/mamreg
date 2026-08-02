@@ -3,7 +3,7 @@
   "_note": "Canonical book. Edit here (or in-browser, then Export/Publish) and commit to redeploy. Analysts Mark/Ang/Aloy hold the seed calls (transcribed from the reference screenshots — demo India data plus two sample TW/HK holdings). Holdings.country is the display bucket; benchmark & currency are resolved from the Yahoo ticker suffix. Replace with your real calls/holdings.",
   "analysts": [
     { "id": "mark", "name": "Mark", "note": "" },
-    { "id": "ang", "name": "Ziv", "note": "" },
+    { "id": "ziv", "name": "Ziv", "note": "" },
     { "id": "aloy", "name": "Aloy", "note": "" }
   ],
   "holdings": [
@@ -25,31 +25,31 @@
   ],
   "calls": [
     { "id": "c1", "analyst": "mark", "name": "Reliance Industries", "ticker": "RELIANCE.NS", "call": "Sell", "entry": 1317.20, "entryDate": "2026-07-20", "exit": null, "exitDate": null, "source": "", "notes": "", "rationale": "Retail margins peaking and Jio ARPU hikes now priced in; O2C spreads normalising after a strong run. Prefer to book gains and revisit below 1,150." },
-    { "id": "c2", "analyst": "ang", "name": "Avenue Supermarts", "ticker": "DMART.NS", "call": "Buy", "entry": 3950.00, "entryDate": "2026-07-13", "exit": null, "exitDate": null, "source": "", "notes": "", "rationale": "Same-store sales re-accelerating and store adds back on track; the recent de-rating on quick-commerce fears looks overdone for a category leader with the best unit economics." },
+    { "id": "c2", "analyst": "ziv", "name": "Avenue Supermarts", "ticker": "DMART.NS", "call": "Buy", "entry": 3950.00, "entryDate": "2026-07-13", "exit": null, "exitDate": null, "source": "", "notes": "", "rationale": "Same-store sales re-accelerating and store adds back on track; the recent de-rating on quick-commerce fears looks overdone for a category leader with the best unit economics." },
     { "id": "c3", "analyst": "aloy", "name": "GE Vernova T&D India", "ticker": "GVT&D.NS", "call": "Buy", "entry": 4350.00, "entryDate": "2026-05-19", "exit": null, "exitDate": null, "source": "", "notes": "", "rationale": "Order book at a record on grid capex and export wins; operating leverage should keep margins expanding into FY27. Structural transmission upcycle, not a one-year trade." },
     { "id": "c4", "analyst": "mark", "name": "Amber Enterprises", "ticker": "AMBER.NS", "call": "Buy", "entry": 7158.00, "entryDate": "2026-05-19", "exit": null, "exitDate": null, "source": "", "notes": "" },
-    { "id": "c5", "analyst": "ang", "name": "TVS Motor", "ticker": "TVSMOTOR.NS", "call": "Hold", "entry": 3492.90, "entryDate": "2026-05-14", "exit": null, "exitDate": null, "source": "", "notes": "" },
+    { "id": "c5", "analyst": "ziv", "name": "TVS Motor", "ticker": "TVSMOTOR.NS", "call": "Hold", "entry": 3492.90, "entryDate": "2026-05-14", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c6", "analyst": "aloy", "name": "State Bank of India", "ticker": "SBIN.NS", "call": "Buy", "entry": 1068.45, "entryDate": "2026-05-11", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c7", "analyst": "mark", "name": "Polycab India", "ticker": "POLYCAB.NS", "call": "Buy", "entry": 8110.50, "entryDate": "2026-05-07", "exit": null, "exitDate": null, "source": "", "notes": "" },
-    { "id": "c8", "analyst": "ang", "name": "Larsen & Toubro", "ticker": "LT.NS", "call": "Buy", "entry": 4014.00, "entryDate": "2026-05-06", "exit": null, "exitDate": null, "source": "", "notes": "" },
+    { "id": "c8", "analyst": "ziv", "name": "Larsen & Toubro", "ticker": "LT.NS", "call": "Buy", "entry": 4014.00, "entryDate": "2026-05-06", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c9", "analyst": "aloy", "name": "Adani Ports", "ticker": "ADANIPORTS.NS", "call": "Buy", "entry": 1657.30, "entryDate": "2026-05-04", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c10", "analyst": "mark", "name": "Shriram Finance", "ticker": "SHRIRAMFIN.NS", "call": "Hold", "entry": 915.60, "entryDate": "2026-04-27", "exit": null, "exitDate": null, "source": "", "notes": "" },
-    { "id": "c11", "analyst": "ang", "name": "ICICI Bank", "ticker": "ICICIBANK.NS", "call": "Buy", "entry": 1228.10, "entryDate": "2026-04-20", "exit": null, "exitDate": null, "source": "", "notes": "" },
+    { "id": "c11", "analyst": "ziv", "name": "ICICI Bank", "ticker": "ICICIBANK.NS", "call": "Buy", "entry": 1228.10, "entryDate": "2026-04-20", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c12", "analyst": "aloy", "name": "HDFC Bank", "ticker": "HDFCBANK.NS", "call": "Buy", "entry": 743.00, "entryDate": "2026-04-20", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c13", "analyst": "mark", "name": "Lloyds Metals and Energy", "ticker": "LLOYDSME.NS", "call": "Buy", "entry": 1383.60, "entryDate": "2026-04-10", "exit": null, "exitDate": null, "source": "", "notes": "" },
-    { "id": "c14", "analyst": "ang", "name": "Mahindra & Mahindra", "ticker": "M&M.NS", "call": "Buy", "entry": 3444.30, "entryDate": "2026-02-12", "exit": null, "exitDate": null, "source": "", "notes": "" },
+    { "id": "c14", "analyst": "ziv", "name": "Mahindra & Mahindra", "ticker": "M&M.NS", "call": "Buy", "entry": 3444.30, "entryDate": "2026-02-12", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c15", "analyst": "aloy", "name": "Eicher Motors", "ticker": "EICHERMOT.NS", "call": "Hold", "entry": 7122.50, "entryDate": "2026-02-11", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c16", "analyst": "mark", "name": "Hero MotoCorp", "ticker": "HEROMOTOCO.NS", "call": "Hold", "entry": 5568.00, "entryDate": "2026-02-09", "exit": null, "exitDate": null, "source": "", "notes": "" },
-    { "id": "c17", "analyst": "ang", "name": "Dixon Technologies", "ticker": "DIXON.NS", "call": "Sell", "entry": 10360.0, "entryDate": "2026-01-30", "exit": null, "exitDate": null, "source": "", "notes": "" },
+    { "id": "c17", "analyst": "ziv", "name": "Dixon Technologies", "ticker": "DIXON.NS", "call": "Sell", "entry": 10360.0, "entryDate": "2026-01-30", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c18", "analyst": "aloy", "name": "UltraTech Cement", "ticker": "ULTRACEMCO.NS", "call": "Hold", "entry": 11792.0, "entryDate": "2026-01-26", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c19", "analyst": "mark", "name": "Kotak Mahindra Bank", "ticker": "KOTAKBANK.NS", "call": "Buy", "entry": 442.00, "entryDate": "2026-01-26", "exit": null, "exitDate": null, "source": "", "notes": "seed entry price looks like demo data — replace with real entry" },
-    { "id": "c20", "analyst": "ang", "name": "Bajaj Auto", "ticker": "BAJAJ-AUTO.NS", "call": "Sell", "entry": 9365.00, "entryDate": "2026-01-09", "exit": null, "exitDate": null, "source": "", "notes": "" },
+    { "id": "c20", "analyst": "ziv", "name": "Bajaj Auto", "ticker": "BAJAJ-AUTO.NS", "call": "Sell", "entry": 9365.00, "entryDate": "2026-01-09", "exit": null, "exitDate": null, "source": "", "notes": "" },
     { "id": "c21", "analyst": "aloy", "name": "Avenue Supermarts", "ticker": "DMART.NS", "call": "Buy", "entry": 4167.40, "entryDate": "2026-05-21", "exit": 3950.00, "exitDate": "2026-07-13", "source": "", "notes": "" },
     { "id": "c22", "analyst": "mark", "name": "Reliance Industries", "ticker": "RELIANCE.NS", "call": "Hold", "entry": 1313.00, "entryDate": "2026-04-27", "exit": 1317.20, "exitDate": "2026-07-21", "source": "", "notes": "" }
   ],
   "coverage": [
     { "id": "cov-tsmc", "analyst": "mark", "ticker": "2330.TW", "name": "TSMC", "rationale": "Structural AI-compute leader; leading-edge (N3/N2) demand and pricing power intact, and CoWoS packaging remains a bottleneck it controls. Core long-term hold in the coverage.", "history": [ { "id": "hx-tsmc1", "date": "2025-09-15", "rating": "OW" }, { "id": "hx-tsmc2", "date": "2026-05-14", "rating": "N" }, { "id": "hx-tsmc3", "date": "2026-07-20", "rating": "OW" } ] },
-    { "id": "cov-tencent", "analyst": "ang", "ticker": "0700.HK", "name": "Tencent", "rationale": "Games recovery plus ad monetisation of Video Accounts; buybacks support the floor and the AI/cloud optionality is a free call at this valuation.", "history": [ { "id": "hx-tct1", "date": "2025-11-03", "rating": "OW" }, { "id": "hx-tct2", "date": "2026-04-10", "rating": "N" }, { "id": "hx-tct3", "date": "2026-07-01", "rating": "OW" } ] },
+    { "id": "cov-tencent", "analyst": "ziv", "ticker": "0700.HK", "name": "Tencent", "rationale": "Games recovery plus ad monetisation of Video Accounts; buybacks support the floor and the AI/cloud optionality is a free call at this valuation.", "history": [ { "id": "hx-tct1", "date": "2025-11-03", "rating": "OW" }, { "id": "hx-tct2", "date": "2026-04-10", "rating": "N" }, { "id": "hx-tct3", "date": "2026-07-01", "rating": "OW" } ] },
     { "id": "cov-sbin", "analyst": "aloy", "ticker": "SBIN.NS", "name": "State Bank of India", "rationale": "Cheapest large-cap PSU bank on book; asset quality clean, credit growth steady and ROE re-rating still has room versus private peers.", "history": [ { "id": "hx-sbin1", "date": "2026-01-15", "rating": "OW" }, { "id": "hx-sbin2", "date": "2026-05-20", "rating": "UW" } ] }
   ]
 }

@@ -200,10 +200,16 @@ async function load(){
   { const _td=new Date().toISOString().slice(0,10);
     BOOK.coverage.forEach(o=>{ if((!Array.isArray(o.history)||!o.history.length)&&o.rating){ o.history=[{id:"hx-"+Math.random().toString(36).slice(2,8),date:_td,rating:RATING_MIGRATE[o.rating]||"N"}]; } if(!Array.isArray(o.history))o.history=[]; delete o.rating; }); }
   lastSynced=structuredClone(BOOK);
-  // one-off: rename the placeholder analyst "Ang" → "Ziv" (persists via merge since it differs from lastSynced)
-  if((BOOK.analysts||[]).some(a=>a.name==="Ang")){ BOOK.analysts.forEach(a=>{ if(a.name==="Ang") a.name="Ziv"; }); save(); }
+  // one-off: normalise Ziv's analyst — id "ang" → "ziv" (+ name, + re-point its calls/coverage rows)
+  { const a=(BOOK.analysts||[]).find(x=>x.id==="ang"||x.name==="Ang");
+    if(a){ a.name="Ziv"; if(a.id==="ang"){ a.id="ziv";
+      ["calls","coverage"].forEach(k=>(BOOK[k]||[]).forEach(r=>{ if(r.analyst==="ang") r.analyst="ziv"; }));
+      if(selAnalyst==="ang") selAnalyst="ziv"; }
+      save(); } }
   loadCachedPrices();
   parseHash();
+  if(selAnalyst==="ang") selAnalyst="ziv";   // stale hash/deep-link after the id rename
+  if(selAnalyst&&!BOOK.analysts.some(a=>a.id===selAnalyst)) selAnalyst=null;
   if(!selAnalyst&&BOOK.analysts[0]) selAnalyst=BOOK.analysts[0].id;
   buildNav(); render();
   document.getElementById("foot").innerHTML=`<a href="#" id="lockBtn" style="color:var(--muted)">Log Out</a>`;
@@ -233,6 +239,8 @@ function mergeBook(latest, mine, base){
     (base[coll]||[]).forEach(r=>{ if(!mineIds.has(r.id)) byId.delete(r.id); });
     out[coll]=[...byId.values()];
   });
+  // keep analyst tabs in the client's order (so the id rename doesn't shuffle the tabs)
+  if(mine.analysts&&out.analysts){ const rank=new Map(mine.analysts.map((a,i)=>[a.id,i])); out.analysts.sort((x,y)=>(rank.has(x.id)?rank.get(x.id):1e9)-(rank.has(y.id)?rank.get(y.id):1e9)); }
   return out;
 }
 async function pushBook(){
