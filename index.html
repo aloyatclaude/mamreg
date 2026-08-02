@@ -428,6 +428,7 @@ function alphaOpenRow(x){
     <td><input class="cell" data-f="name" style="min-width:140px;text-align:left;font-family:'Manrope'" value="${esc(c.name||"")}" placeholder="(auto)"></td>
     <td>${callSelect(c.call)}</td>
     <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?entryHint(c):"–")}</td>
+    <td class="num">${livePrice(c.ticker)!=null?money(livePrice(c.ticker),ccy):"–"}</td>
     <td class="num">${pctSpan(s.stockRet)}</td>
     ${idxCell(s)}
     <td class="num">${pctSpan(s.alpha)}</td>
@@ -451,10 +452,10 @@ function alphaClosedRow(x){
     <td><span class="del" data-del>✕</span></td></tr>`;
 }
 function alphaOpenTable(rows){
-  const head=`<tr><th>Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Call</th><th class="num">Entry cost</th><th class="num">Return</th><th class="num">Index return</th><th class="num">Return vs index</th><th class="num">Result</th><th>Close</th></tr>`;
+  const head=`<tr><th>Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Call</th><th class="num">Entry cost</th><th class="num">Last price</th><th class="num">Return</th><th class="num">Index return</th><th class="num">Return vs index</th><th class="num">Result</th><th>Close</th></tr>`;
   const a=aggr(rows);
-  const foot=rows.length?`<tr class="subtotal"><td colspan="4">Open · ${rows.length} · Hit rate ${a.hitTxt}</td><td></td><td class="num">${pctSpan(a.avgR)}</td><td class="num">${pctSpan(a.avgB)}</td><td class="num">${pctSpan(a.avgA)}</td><td colspan="2"></td></tr>`:"";
-  const body=rows.length?rows.map(alphaOpenRow).join(""):emptyRow(10,"No open calls yet — click + Add call.");
+  const foot=rows.length?`<tr class="subtotal"><td colspan="4">Open · ${rows.length} · Hit rate ${a.hitTxt}</td><td colspan="2"></td><td class="num">${pctSpan(a.avgR)}</td><td class="num">${pctSpan(a.avgB)}</td><td class="num">${pctSpan(a.avgA)}</td><td colspan="2"></td></tr>`:"";
+  const body=rows.length?rows.map(alphaOpenRow).join(""):emptyRow(11,"No open calls yet — click + Add call.");
   return `<div class="desc">Key in <b>Entry date</b> → <b>Ticker</b> and the row auto-fills. Entry cost = closing price on the entry date · Return = today ÷ entry cost · Index return = that market's index · Return vs index = alpha. Hit/miss on alpha (Hold excluded; <b>*</b> = open, marked-to-market).</div>
     <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody>${foot?`<tfoot>${foot}</tfoot>`:""}</table></div>
     <div class="addbar"><button class="btn sm" data-addcall>+ Add call</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search any stock — name, entry cost and returns fill in automatically.</span></div>`;
