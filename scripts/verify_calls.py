@@ -34,7 +34,7 @@ PRICES = os.path.join(ROOT, "data", "prices.json")
 
 # Benchmark resolved from the Yahoo ticker suffix (mirrors fetch_prices.py / index.html).
 SUFFIX_BENCH = {
-    ".HK": "^HSI", ".SS": "000300.SS", ".SZ": "000300.SS", ".NS": "^CRSLDX", ".BO": "^BSESN",
+    ".HK": "^HSI", ".SS": "000300.SS", ".SZ": "000300.SS", ".NS": "^CRSLDX", ".BO": "^CRSLDX",
     ".TW": "^TWII", ".TWO": "^TWII", ".KS": "^KS11", ".KQ": "^KS11", ".SI": "^STI",
     ".KL": "^KLSE", ".BK": "^SET.BK", ".JK": "^JKSE", ".PS": "^PSI", ".T": "^N225",
 }

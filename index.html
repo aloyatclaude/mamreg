@@ -133,7 +133,7 @@ select.cell{cursor:pointer; -webkit-appearance:none; appearance:none}
 <script>
 "use strict";
 /* ---------- ticker-suffix → benchmark / country / currency (mirrors scripts/*.py) ---------- */
-const SUFFIX_BENCH={".HK":"^HSI",".SS":"000300.SS",".SZ":"000300.SS",".NS":"^CRSLDX",".BO":"^BSESN",".TW":"^TWII",".TWO":"^TWII",".KS":"^KS11",".KQ":"^KS11",".SI":"^STI",".KL":"^KLSE",".BK":"^SET.BK",".JK":"^JKSE",".PS":"PSEI.PS",".T":"^N225",".L":"^FTSE",".AX":"^AXJO",".TO":"^GSPTSE",".DE":"^GDAXI",".PA":"^FCHI"};
+const SUFFIX_BENCH={".HK":"^HSI",".SS":"000300.SS",".SZ":"000300.SS",".NS":"^CRSLDX",".BO":"^CRSLDX",".TW":"^TWII",".TWO":"^TWII",".KS":"^KS11",".KQ":"^KS11",".SI":"^STI",".KL":"^KLSE",".BK":"^SET.BK",".JK":"^JKSE",".PS":"PSEI.PS",".T":"^N225",".L":"^FTSE",".AX":"^AXJO",".TO":"^GSPTSE",".DE":"^GDAXI",".PA":"^FCHI"};
 const SUFFIX_COUNTRY={".HK":"HK",".SS":"CN",".SZ":"CN",".NS":"IN",".BO":"IN",".TW":"TW",".TWO":"TW",".KS":"KR",".KQ":"KR",".SI":"ASEAN",".KL":"ASEAN",".BK":"ASEAN",".JK":"ASEAN",".PS":"ASEAN",".T":"JP",".L":"UK",".AX":"AU",".TO":"CA",".DE":"EU",".PA":"EU"};
 const SUFFIX_CCY={".HK":"HKD",".SS":"CNY",".SZ":"CNY",".NS":"INR",".BO":"INR",".TW":"TWD",".TWO":"TWD",".KS":"KRW",".KQ":"KRW",".SI":"SGD",".KL":"MYR",".BK":"THB",".JK":"IDR",".PS":"PHP",".T":"JPY",".L":"GBP",".AX":"AUD",".TO":"CAD",".DE":"EUR",".PA":"EUR"};
 const BENCH_NAME={"^HSI":"Hang Seng","000300.SS":"CSI 300","^CRSLDX":"Nifty 500","^BSESN":"Sensex","^TWII":"TAIEX","^KS11":"KOSPI","^STI":"STI","^KLSE":"KLCI","^SET.BK":"SET","^JKSE":"JKSE","PSEI.PS":"PSEi","^N225":"Nikkei","^GSPC":"S&P 500","^FTSE":"FTSE 100","^AXJO":"ASX 200","^GSPTSE":"TSX","^GDAXI":"DAX","^FCHI":"CAC 40"};

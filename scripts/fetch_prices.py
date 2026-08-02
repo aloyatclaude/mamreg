@@ -31,7 +31,7 @@ OUT = os.path.join(ROOT, "data", "prices.json")
 SUFFIX_BENCH = {
     ".HK": "^HSI",       # Hong Kong
     ".SS": "000300.SS", ".SZ": "000300.SS",  # China A (CSI 300)
-    ".NS": "^CRSLDX", ".BO": "^BSESN",       # India
+    ".NS": "^CRSLDX", ".BO": "^CRSLDX",      # India (both NSE & BSE → Nifty 500)
     ".TW": "^TWII", ".TWO": "^TWII",         # Taiwan
     ".KS": "^KS11", ".KQ": "^KS11",          # Korea
     ".SI": "^STI",  ".KL": "^KLSE", ".BK": "^SET.BK", ".JK": "^JKSE", ".PS": "^PSI",  # ASEAN
