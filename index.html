@@ -521,16 +521,17 @@ function covTotal(o){
   const tk=o.ticker, bench=benchFromTicker(tk), from=h[0].date, abs=periodRet(tk,from,null), b=periodRet(bench,from,null);
   return {abs, rel:(abs!=null&&b!=null)?abs-b:null, from};
 }
+function covCurrent(o){ const p=covPeriods(o); return p.length?p[p.length-1]:null; }  // the current (latest, open) call
 function coverageRow(o){
   const ccy=ccyFromTicker(o.ticker), px=livePrice(o.ticker), bench=benchFromTicker(o.ticker), benchNm=BENCH_NAME[bench]||"";
-  const cur=currentRating(o), tot=covTotal(o), n=(o.history||[]).length, open=openCov.has(o.id), hasStance=n>0;
+  const cur=currentRating(o), n=(o.history||[]).length, open=openCov.has(o.id), hasStance=n>0;
   const priced=!!(o.ticker&&SORTED[o.ticker]&&SORTED[o.ticker].length);
-  const first=sortedHistory(o)[0], entryPx=first?oob(o.ticker,first.date):null;
-  const entryCell=first
-    ? `<input class="cell w-dt" type="date" data-entrydate data-histid="${first.id}" value="${esc(first.date||"")}" title="Start of coverage — the date of your first call">`
+  const now=covCurrent(o), entryPx=now?oob(o.ticker,now.date):null;   // now = your current (latest) call
+  const entryCell=now
+    ? `<input class="cell w-dt" type="date" data-entrydate data-histid="${now.id}" value="${esc(now.date||"")}" title="Date of your current (latest) call">`
     : `<span class="flat">–</span>`;
-  const entryPxCell=first
-    ? (entryPx!=null?money(entryPx,ccy):entryHint({ticker:o.ticker,entryDate:first.date,name:o.name}))
+  const entryPxCell=now
+    ? (entryPx!=null?money(entryPx,ccy):entryHint({ticker:o.ticker,entryDate:now.date,name:o.name}))
     : (o.ticker&&!priced?entryHint({ticker:o.ticker,name:o.name}):"–");
   const ratingCell=hasStance
     ? `<div style="display:flex;gap:8px;align-items:center">${ratingPill(cur)}<button class="btn sm" data-covchange="${o.id}" style="padding:2px 9px">Change</button></div>`
@@ -545,8 +546,8 @@ function coverageRow(o){
     <td>${ratingCell}</td>
     <td class="num">${entryPxCell}</td>
     <td class="num">${px!=null?money(px,ccy):"–"}</td>
-    <td class="num">${pctSpan(tot.abs)}</td>
-    <td class="num">${tot.rel==null?'<span class="flat">–</span>':pctSpan(tot.rel)}${tot.rel!=null&&benchNm?` <span class="tag">${esc(benchNm)}</span>`:""}</td>
+    <td class="num">${pctSpan(now?now.abs:null)}</td>
+    <td class="num">${(now&&now.rel!=null)?pctSpan(now.rel)+(benchNm?` <span class="tag">${esc(benchNm)}</span>`:""):'<span class="flat">–</span>'}</td>
     <td class="num">${histCell}</td>
     <td>${noteIcon("coverage",o,"Comment")}</td>
     <td><span class="del" data-del>✕</span></td></tr>`;
@@ -572,9 +573,9 @@ function coverageDetail(o){
 }
 function coverageTable(){
   const rows=(BOOK.coverage||[]).filter(o=>o.analyst===selAnalyst);
-  const head=`<tr><th style="text-align:left">Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Rating</th><th class="num">Entry price</th><th class="num">Last price</th><th class="num">Total return</th><th class="num">vs Index</th><th class="num">History</th><th>Comment</th><th></th></tr>`;
+  const head=`<tr><th style="text-align:left">Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Rating</th><th class="num">Entry price</th><th class="num">Last price</th><th class="num">Return</th><th class="num">vs Index</th><th class="num">History</th><th>Comment</th><th></th></tr>`;
   const body=rows.length?rows.map(coverageRow).join(""):emptyRow(11,"No coverage yet — click + Add name.");
-  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. Type a <b>Ticker</b> (pick the exact listing), then <b>Set call</b> to record your rating and the <b>date you made the call</b> — that date becomes the <b>Entry date</b> (returns run from then; back-date it to see real numbers). <b>Change</b> logs a later call. <b>Total return / vs Index</b> = the stock's return since your first call (Entry price → Last price), and vs its market index. Open <b>History</b> (▸) to see each call and its return. Click <b>💬 Comment</b> to record the thesis readers see.</div>
+  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. Type a <b>Ticker</b> (pick the exact listing), then <b>Set call</b> to record your rating and the <b>date you made the call</b>. <b>Entry date</b> = the date of your <b>current (latest) call</b> — it moves when you <b>Change</b> your call; <b>Entry price</b> = the price then. <b>Return / vs Index</b> = the stock's move since your current call (Entry price → Last price), and vs its market index. Open <b>History</b> (▸) for each call and the <b>lifetime</b> total since your first call. Click <b>💬 Comment</b> to record the thesis readers see.</div>
     <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>
     <div class="addbar"><button class="btn sm" data-addcov>+ Add name</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search — name and price fill in automatically. Independent of your timed Alpha calls.</span></div>`;
 }
