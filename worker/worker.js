@@ -1,13 +1,20 @@
 /**
  * mamreg-api — Cloudflare Worker backing the Research Portal.
  *
+ * Roles (Bearer password ⇒ role):
+ *   WRITE_TOKEN  → admin  — edits everything (all analysts + Holdings + roster)
+ *   EDITORS      → editor — JSON {"<password>":"<analystId>"}; edits ONLY that analyst's calls/coverage
+ *   VIEW_TOKEN   → viewer — read-only
+ *
  * Routes (all CORS-enabled):
  *   GET  /search?q=…            → Yahoo symbol search  → [{symbol,name,exchange,type}]
  *   GET  /chart?symbol=…&range= → Yahoo v8 chart passthrough (adjusted closes)
- *   GET  /book                  → the stored book JSON (Cloudflare KV), or {}
- *   PUT  /book                  → save book JSON to KV (needs Bearer WRITE_TOKEN)
+ *   GET  /me                    → {role, analyst} for the Bearer token (401 if unknown)
+ *   GET  /book                  → the stored book JSON (any valid role), or {}
+ *   PUT  /book                  → admin: full write · editor: scoped to own calls/coverage · viewer: 403
  *
- * Bindings: KV namespace `BOOK_KV`, secret `WRITE_TOKEN`.
+ * Bindings: KV namespace `BOOK_KV`; secrets `WRITE_TOKEN` (admin), `VIEW_TOKEN` (viewer),
+ *           `EDITORS` (JSON string, password→analystId).
  */
 const YH = "https://query1.finance.yahoo.com";
 const UA = "Mozilla/5.0 (mamreg-worker)";
@@ -30,6 +37,19 @@ async function yahoo(path, ttl) {
     cf: ttl ? { cacheTtl: ttl, cacheEverything: true } : undefined,
   });
 }
+
+// Map a request's Bearer token to a role. admin > editor > viewer.
+function resolveRole(req, env) {
+  const tok = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  if (!tok) return { role: "none", analyst: null };
+  if (env.WRITE_TOKEN && tok === env.WRITE_TOKEN) return { role: "admin", analyst: null };
+  let editors = {};
+  try { editors = JSON.parse(env.EDITORS || "{}"); } catch {}
+  if (editors[tok]) return { role: "editor", analyst: editors[tok] };
+  if (env.VIEW_TOKEN && tok === env.VIEW_TOKEN) return { role: "viewer", analyst: null };
+  return { role: "none", analyst: null };
+}
+const asArr = (x) => (Array.isArray(x) ? x : []);
 
 export default {
   async fetch(req, env) {
@@ -72,24 +92,50 @@ export default {
         });
       }
 
+      if (p.endsWith("/me")) {
+        const who = resolveRole(req, env);
+        if (who.role === "none") return json({ error: "unauthorized" }, 401);
+        return json({ role: who.role, analyst: who.analyst });
+      }
+
       if (p.endsWith("/book")) {
-        // Site password gates BOTH read and write of the book (the sensitive data).
-        const auth = req.headers.get("authorization") || "";
-        if (!env.WRITE_TOKEN || auth !== `Bearer ${env.WRITE_TOKEN}`)
-          return json({ error: "unauthorized" }, 401);
+        const who = resolveRole(req, env);
+        if (who.role === "none") return json({ error: "unauthorized" }, 401); // any valid role may read
+
         if (req.method === "GET") {
           const b = await env.BOOK_KV.get("book");
           return json(b ? JSON.parse(b) : {});
         }
+
         if (req.method === "PUT") {
+          if (who.role !== "admin" && who.role !== "editor")
+            return json({ error: "forbidden (view only)" }, 403);
           const body = await req.text();
-          try {
-            JSON.parse(body);
-          } catch {
-            return json({ error: "invalid json" }, 400);
+          let inc;
+          try { inc = JSON.parse(body); } catch { return json({ error: "invalid json" }, 400); }
+
+          if (who.role === "admin") {
+            await env.BOOK_KV.put("book", body);   // full write
+            return json({ ok: true, role: "admin" });
           }
-          await env.BOOK_KV.put("book", body);
-          return json({ ok: true });
+
+          // editor: keep everyone else's data + Holdings + roster from the CURRENT book;
+          // accept only this editor's own calls/coverage rows from the incoming book.
+          const X = who.analyst;
+          const curRaw = await env.BOOK_KV.get("book");
+          const cur = curRaw ? JSON.parse(curRaw) : {};
+          const merged = {
+            ...cur,
+            updated: inc.updated || cur.updated,
+            analysts: asArr(cur.analysts),
+            holdings: asArr(cur.holdings),
+            calls: asArr(cur.calls).filter((c) => c.analyst !== X)
+              .concat(asArr(inc.calls).filter((c) => c.analyst === X)),
+            coverage: asArr(cur.coverage).filter((c) => c.analyst !== X)
+              .concat(asArr(inc.coverage).filter((c) => c.analyst === X)),
+          };
+          await env.BOOK_KV.put("book", JSON.stringify(merged));
+          return json({ ok: true, role: "editor", analyst: X });
         }
         return json({ error: "method not allowed" }, 405);
       }

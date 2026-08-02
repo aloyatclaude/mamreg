@@ -125,6 +125,7 @@ select.cell{cursor:pointer; -webkit-appearance:none; appearance:none}
         <span id="sync" class="small"></span>
       </div>
     </div>
+    <div id="roleBanner" class="small" style="display:none;margin:0 0 12px;padding:8px 12px;border:1px solid var(--border-2);border-radius:9px;background:var(--surface-2);color:var(--text-2)"></div>
     <div id="views"></div>
   </main>
 </div>
@@ -153,11 +154,23 @@ let BOOK=null, PRICES={quotes:{},closes:{},fx:{},generated:null}, SEED=null;
 let SORTED={};
 let view="analysts", selAnalyst=null, section="calls", tileScope="auto";
 let charts={};
+let ROLE={role:null, analyst:null};   // admin | editor(+analyst) | viewer
+function canEdit(id){ return ROLE.role==="admin" || (ROLE.role==="editor" && ROLE.analyst===id); }
+function canEditHoldings(){ return ROLE.role==="admin"; }
+function canAddAnalyst(){ return ROLE.role==="admin"; }
 
 /* ---------- load / save (book in Cloudflare KV via the Worker) ---------- */
 /* ---------- auth / one shared site password ---------- */
 function authHeaders(){ return {authorization:"Bearer "+(localStorage.getItem(LS_TOKEN)||"")}; }
 function getBook(){ return fetch(`${WORKER}/book`,{headers:authHeaders()}); }
+async function fetchRole(){   // → {role,analyst} | {role:"none"} | null(network)
+  try{ const r=await fetch(`${WORKER}/me`,{headers:authHeaders()});
+    if(r.status===404) return {role:"admin",analyst:null};   // legacy Worker (pre-roles) → behave as before
+    if(r.ok) return await r.json();
+    if(r.status===401) return {role:"none",analyst:null};
+  }catch(e){}
+  return null;
+}
 function boot(){
   const qs=new URLSearchParams(location.search);
   if(qs.get("token")) localStorage.setItem(LS_TOKEN, qs.get("token"));   // dev convenience
@@ -176,9 +189,9 @@ function showGate(msg){
     const pw=inp.value.trim(); if(!pw)return;
     document.getElementById("gateErr").textContent="";
     localStorage.setItem(LS_TOKEN,pw);
-    let r=null; try{ r=await getBook(); }catch(e){}
-    if(r&&r.ok){ root.innerHTML=""; load(); }
-    else if(r&&r.status===401){ localStorage.removeItem(LS_TOKEN); document.getElementById("gateErr").textContent="Incorrect password."; }
+    const role=await fetchRole();
+    if(role&&role.role&&role.role!=="none"){ ROLE=role; root.innerHTML=""; load(); }
+    else if(role&&role.role==="none"){ localStorage.removeItem(LS_TOKEN); document.getElementById("gateErr").textContent="Incorrect password."; }
     else { document.getElementById("gateErr").textContent="Can't reach the server — try again."; }
   };
   document.getElementById("gateGo").onclick=go;
@@ -186,6 +199,7 @@ function showGate(msg){
 }
 async function load(){
   const qs=new URLSearchParams(location.search);
+  if(!ROLE.role){ const role=await fetchRole(); if(!role||role.role==="none"){ localStorage.removeItem(LS_TOKEN); showGate("Enter the password to continue."); return; } ROLE=role; }
   try{ SEED=await fetch("data/book.json").then(r=>r.json()); }catch(e){ SEED={analysts:[],holdings:[],calls:[]}; }
   let book=null;
   try{ const r=await getBook();
@@ -225,6 +239,7 @@ let _saveTimer=null, lastSynced=null, _dirty=false, _poll=null;
 function save(){
   BOOK.updated=new Date().toISOString().slice(0,10);
   try{ localStorage.setItem(LS_BOOK,JSON.stringify(BOOK)); }catch(e){}
+  if(ROLE.role==="viewer") return;   // viewers never write to the cloud
   _dirty=true; clearTimeout(_saveTimer); _saveTimer=setTimeout(pushBook,900); syncStatus("saving");
 }
 function mergeBook(latest, mine, base){
@@ -411,6 +426,25 @@ function render(){
   const v=document.getElementById("views");
   v.innerHTML = view==="holdings" ? renderHoldings() : renderAnalysts();
   wire();
+  applyPermissions();
+  roleBanner();
+}
+function applyPermissions(){   // read-only gating (UX only — the Worker is the real boundary)
+  const v=document.getElementById("views"); if(!v) return;
+  if(!canAddAnalyst()) v.querySelectorAll('[data-analyst="__new"]').forEach(el=>el.style.display="none");
+  const editable = view==="holdings" ? canEditHoldings() : canEdit(selAnalyst);
+  if(editable){ v.classList.remove("viewonly"); return; }
+  v.classList.add("viewonly");
+  v.querySelectorAll("input.cell,select.cell").forEach(el=>{ el.setAttribute("readonly","readonly"); el.disabled=true; });
+  const pdf=v.querySelector("#pdfInput"); if(pdf) pdf.disabled=true;
+  v.querySelectorAll("[data-addcall],[data-addhold],[data-addcov],[data-close],[data-covchange],[data-covclose],[data-covreopen],[data-covdel],[data-covrestore],.del,#btnPdf").forEach(el=>el.style.display="none");
+}
+function roleBanner(){
+  const el=document.getElementById("roleBanner"); if(!el) return;
+  if(ROLE.role==="viewer"){ el.style.display=""; el.innerHTML="🔒 <b>View only</b> — you can browse everything but not edit."; }
+  else if(ROLE.role==="editor"){ el.style.display=""; el.innerHTML=`✎ Signed in as <b>${esc(analystName(ROLE.analyst))}</b> — you can edit only your own Alpha &amp; Coverage. Everything else is read-only.`; }
+  else if(ROLE.role==="admin"){ el.style.display=""; el.innerHTML="✎ <b>Admin</b> — full edit."; }
+  else { el.style.display="none"; }
 }
 
 /* ---------- ANALYSTS ---------- */
@@ -637,16 +671,17 @@ function noteIcon(coll,o,label){
 }
 function rationaleModal(coll,id){
   const obj=(BOOK[coll]||[]).find(o=>o.id===id); if(!obj) return;
+  const editable=canEdit(obj.analyst);   // readers can view; only the owner (or admin) edits
   const root=document.getElementById("modalRoot");
   const label=obj.name||obj.ticker||"this call";
   const kind=coll==="coverage"?"name":"call";
   root.innerHTML=`<div class="modal"><div class="box"><span class="x" id="mx">×</span><h3>Rationale — ${esc(label)}</h3>
     <div class="small">${esc(obj.ticker||"")} — the thesis behind this ${kind}. Readers see this when they open 💬.</div>
-    <div class="field"><textarea id="ratTxt" rows="8" style="width:100%;background:var(--surface-2);border:1px solid var(--border-2);color:var(--text);padding:9px 11px;border-radius:8px;font:inherit;font-size:13px;line-height:1.5;resize:vertical" placeholder="Why this call? Catalyst, valuation, risks, what would change your mind…">${esc(obj.rationale||"")}</textarea></div>
-    <div class="addbar"><button class="btn gold" id="ratSave">Save</button><button class="btn ghost" id="ratCancel">Cancel</button></div></div></div>`;
+    <div class="field"><textarea id="ratTxt" rows="8" ${editable?"":"readonly"} style="width:100%;background:var(--surface-2);border:1px solid var(--border-2);color:var(--text);padding:9px 11px;border-radius:8px;font:inherit;font-size:13px;line-height:1.5;resize:vertical" placeholder="Why this call? Catalyst, valuation, risks, what would change your mind…">${esc(obj.rationale||"")}</textarea></div>
+    <div class="addbar">${editable?`<button class="btn gold" id="ratSave">Save</button><button class="btn ghost" id="ratCancel">Cancel</button>`:`<button class="btn ghost" id="ratCancel">Close</button>`}</div></div></div>`;
   root.querySelector("#mx").onclick=root.querySelector("#ratCancel").onclick=()=>root.innerHTML="";
   root.querySelector(".modal").onclick=e=>{if(e.target.classList.contains("modal"))root.innerHTML="";};
-  root.querySelector("#ratSave").onclick=()=>{ obj.rationale=root.querySelector("#ratTxt").value; save(); root.innerHTML=""; render(); };
+  if(editable) root.querySelector("#ratSave").onclick=()=>{ obj.rationale=root.querySelector("#ratTxt").value; save(); root.innerHTML=""; render(); };
   setTimeout(()=>{const t=root.querySelector("#ratTxt"); if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length);}},30);
 }
 function stockCell(o){
