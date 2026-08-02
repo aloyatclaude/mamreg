@@ -155,41 +155,100 @@ let view="analysts", selAnalyst=null, section="calls";
 let charts={};
 
 /* ---------- load / save (book in Cloudflare KV via the Worker) ---------- */
-async function load(){
+/* ---------- auth / one shared site password ---------- */
+function authHeaders(){ return {authorization:"Bearer "+(localStorage.getItem(LS_TOKEN)||"")}; }
+function getBook(){ return fetch(`${WORKER}/book`,{headers:authHeaders()}); }
+function boot(){
   const qs=new URLSearchParams(location.search);
   if(qs.get("token")) localStorage.setItem(LS_TOKEN, qs.get("token"));   // dev convenience
+  if(localStorage.getItem(LS_TOKEN)) load(); else showGate();
+}
+function showGate(msg){
+  const root=document.getElementById("modalRoot");
+  root.innerHTML=`<div class="modal" style="background:var(--page)"><div class="box" style="width:min(360px,92vw);text-align:center">
+    <div class="brand" style="font-size:23px">Research Portal</div>
+    <div class="small" style="margin:8px 0 16px">Enter the shared password to continue.</div>
+    <input id="gatePw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;background:var(--surface-2);border:1px solid var(--border-2);color:var(--text);padding:10px 12px;border-radius:9px;font-size:14px">
+    <div id="gateErr" class="down" style="font-size:12px;height:16px;margin-top:8px">${esc(msg||"")}</div>
+    <button class="btn gold" id="gateGo" style="width:100%;margin-top:8px">Enter</button></div></div>`;
+  const inp=document.getElementById("gatePw"); inp.focus();
+  const go=async()=>{
+    const pw=inp.value.trim(); if(!pw)return;
+    document.getElementById("gateErr").textContent="";
+    localStorage.setItem(LS_TOKEN,pw);
+    let r=null; try{ r=await getBook(); }catch(e){}
+    if(r&&r.ok){ root.innerHTML=""; load(); }
+    else if(r&&r.status===401){ localStorage.removeItem(LS_TOKEN); document.getElementById("gateErr").textContent="Incorrect password."; }
+    else { document.getElementById("gateErr").textContent="Can't reach the server — try again."; }
+  };
+  document.getElementById("gateGo").onclick=go;
+  inp.onkeydown=e=>{ if(e.key==="Enter") go(); };
+}
+async function load(){
+  const qs=new URLSearchParams(location.search);
   try{ SEED=await fetch("data/book.json").then(r=>r.json()); }catch(e){ SEED={analysts:[],holdings:[],calls:[]}; }
   let book=null;
-  try{ const r=await fetch(`${WORKER}/book`); if(r.ok){ const b=await r.json(); if(b&&(b.calls||b.holdings||b.analysts)) book=b; } }catch(e){}
+  try{ const r=await getBook();
+    if(r.status===401){ localStorage.removeItem(LS_TOKEN); showGate("Incorrect password."); return; }
+    if(r.ok){ const b=await r.json(); if(b&&(b.calls||b.holdings||b.analysts)) book=b; }
+  }catch(e){}
   if(!book){ const ls=localStorage.getItem(LS_BOOK); if(ls){ try{book=JSON.parse(ls);}catch(e){} } }
   BOOK=book?book:structuredClone(SEED);
   if(!BOOK.holdings)BOOK.holdings=[]; if(!BOOK.calls)BOOK.calls=[]; if(!BOOK.analysts)BOOK.analysts=[];
+  lastSynced=structuredClone(BOOK);
   loadCachedPrices();
   parseHash();
   if(!selAnalyst&&BOOK.analysts[0]) selAnalyst=BOOK.analysts[0].id;
   buildNav(); render();
-  document.getElementById("foot").innerHTML=`Live prices via Yahoo · indicative<br><span class="small">returns from adjusted closes</span>`;
+  document.getElementById("foot").innerHTML=`Live prices via Yahoo · indicative<br><a href="#" id="lockBtn" style="color:var(--muted)">Lock</a> · returns from adjusted closes`;
+  const lb=document.getElementById("lockBtn"); if(lb) lb.onclick=e=>{e.preventDefault(); if(_poll)clearInterval(_poll); localStorage.removeItem(LS_TOKEN); showGate("Locked. Enter the password to continue.");};
   await priceAll(); render();
+  startPolling();
   if(qs.has("pdftest")) setTimeout(()=>reviewHoldings(parseHoldingsText(SAMPLE_STMT),"self-test sample"),300);
   if(qs.get("ddtest")) setTimeout(async()=>{ addCall(); const inp=document.querySelector('input.cell[data-f="ticker"]'); if(inp){ inp.focus(); inp.value=qs.get("ddtest"); await runSearch(inp,qs.get("ddtest")); } },500);
 }
-let _saveTimer=null;
+let _saveTimer=null, lastSynced=null, _dirty=false, _poll=null;
 function save(){
   BOOK.updated=new Date().toISOString().slice(0,10);
   try{ localStorage.setItem(LS_BOOK,JSON.stringify(BOOK)); }catch(e){}
-  clearTimeout(_saveTimer); _saveTimer=setTimeout(pushBook,900); syncStatus("saving");
+  _dirty=true; clearTimeout(_saveTimer); _saveTimer=setTimeout(pushBook,900); syncStatus("saving");
+}
+function mergeBook(latest, mine, base){
+  const empty={analysts:[],holdings:[],calls:[]};
+  latest=(latest&&(latest.calls||latest.holdings||latest.analysts))?latest:empty; base=base||empty;
+  const out={...mine};
+  ["analysts","holdings","calls"].forEach(coll=>{
+    const byId=new Map((latest[coll]||[]).map(r=>[r.id,r]));
+    const baseById=new Map((base[coll]||[]).map(r=>[r.id,r]));
+    const mineIds=new Set((mine[coll]||[]).map(r=>r.id));
+    (mine[coll]||[]).forEach(r=>{ const b=baseById.get(r.id); if(!b||JSON.stringify(b)!==JSON.stringify(r)) byId.set(r.id,r); });
+    (base[coll]||[]).forEach(r=>{ if(!mineIds.has(r.id)) byId.delete(r.id); });
+    out[coll]=[...byId.values()];
+  });
+  return out;
 }
 async function pushBook(){
-  const token=localStorage.getItem(LS_TOKEN)||"";
+  let merged=BOOK;
+  try{ const r=await getBook();
+    if(r.status===401){ localStorage.removeItem(LS_TOKEN); if(_poll)clearInterval(_poll); showGate("Session expired — enter the password again."); return; }
+    if(r.ok){ merged=mergeBook(await r.json(), BOOK, lastSynced); }
+  }catch(e){}
   try{
-    const r=await fetch(`${WORKER}/book`,{method:"PUT",headers:{"content-type":"application/json",authorization:"Bearer "+token},body:JSON.stringify(BOOK)});
-    if(r.status===401){ const t=prompt("One-time save passphrase (the WRITE_TOKEN you set on the backend):"); if(t){ localStorage.setItem(LS_TOKEN,t); return pushBook(); } syncStatus("unsaved"); return; }
-    syncStatus(r.ok?"saved":"error");
+    const r=await fetch(`${WORKER}/book`,{method:"PUT",headers:{"content-type":"application/json",...authHeaders()},body:JSON.stringify(merged)});
+    if(r.status===401){ localStorage.removeItem(LS_TOKEN); if(_poll)clearInterval(_poll); showGate("Session expired — enter the password again."); return; }
+    if(r.ok){ const changed=JSON.stringify(merged)!==JSON.stringify(BOOK); BOOK=merged; lastSynced=structuredClone(merged); _dirty=false; syncStatus("saved"); if(changed) priceAll().then(render); }
+    else syncStatus("error");
   }catch(e){ syncStatus("offline"); }
 }
+function startPolling(){ if(_poll)clearInterval(_poll); _poll=setInterval(async()=>{
+  if(_dirty) return;
+  try{ const r=await getBook();
+    if(r.status===401){ clearInterval(_poll); localStorage.removeItem(LS_TOKEN); showGate("Session expired — enter the password again."); return; }
+    if(r.ok){ const latest=await r.json(); if(latest&&(latest.calls||latest.holdings||latest.analysts)&&JSON.stringify(latest)!==JSON.stringify(BOOK)){ BOOK=latest; lastSynced=structuredClone(latest); await priceAll(); render(); } }
+  }catch(e){} }, 20000); }
 function syncStatus(s){ const el=document.getElementById("sync"); if(!el)return;
-  const map={saving:"saving…",saved:"saved ✓","":"",error:"save error",offline:"offline · saved on this device",unsaved:"not saved — passphrase needed"};
-  el.textContent=map[s]??s; el.style.color=(s==="error"||s==="unsaved")?"var(--down)":"var(--muted)";
+  const map={saving:"saving…",saved:"saved ✓","":"",error:"save error",offline:"offline · saved on this device"};
+  el.textContent=map[s]??s; el.style.color=(s==="error")?"var(--down)":"var(--muted)";
   if(s==="saved") setTimeout(()=>{if(el.textContent==="saved ✓")el.textContent="";},1500);
 }
 
@@ -597,7 +656,7 @@ function reviewHoldings(rows,src){
 function toast(html){let t=document.getElementById("toast"); if(!t){t=document.createElement("div");t.id="toast";t.style.cssText="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border-2);padding:9px 16px;border-radius:10px;z-index:80;font-size:13px";document.body.appendChild(t);} if(!html){t.remove();return;} t.innerHTML=html;}
 
 function emptyRow(cols,msg){return `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:22px">${msg||"Nothing here yet."}</td></tr>`;}
-load();
+boot();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>

@@ -73,14 +73,15 @@ export default {
       }
 
       if (p.endsWith("/book")) {
+        // Site password gates BOTH read and write of the book (the sensitive data).
+        const auth = req.headers.get("authorization") || "";
+        if (!env.WRITE_TOKEN || auth !== `Bearer ${env.WRITE_TOKEN}`)
+          return json({ error: "unauthorized" }, 401);
         if (req.method === "GET") {
           const b = await env.BOOK_KV.get("book");
           return json(b ? JSON.parse(b) : {});
         }
         if (req.method === "PUT") {
-          const auth = req.headers.get("authorization") || "";
-          if (!env.WRITE_TOKEN || auth !== `Bearer ${env.WRITE_TOKEN}`)
-            return json({ error: "unauthorized" }, 401);
           const body = await req.text();
           try {
             JSON.parse(body);
