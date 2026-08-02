@@ -420,7 +420,7 @@ function alphaOpenRow(x){
     <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(c.ticker||"")}" placeholder="TICKER.XX"></td>
     <td><input class="cell" data-f="name" style="min-width:140px;text-align:left;font-family:'Manrope'" value="${esc(c.name||"")}" placeholder="(auto)"></td>
     <td>${callSelect(c.call)}</td>
-    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?`<span class="down" style="font-size:11px" title="Type in the Ticker box and pick the exact listing (with its exchange) from the dropdown">⚠ pick</span>`:"–")}</td>
+    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?`<span style="font-size:11px;color:var(--accent)" title="Type in the Ticker box and pick the exact listing (with its exchange) from the dropdown">⚠ pick</span>`:"–")}</td>
     <td class="num">${pctSpan(s.stockRet)}</td>
     ${idxCell(s)}
     <td class="num">${pctSpan(s.alpha)}</td>
@@ -434,7 +434,7 @@ function alphaClosedRow(x){
     <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(c.ticker||"")}"></td>
     <td><input class="cell" data-f="name" style="min-width:140px;text-align:left;font-family:'Manrope'" value="${esc(c.name||"")}"></td>
     <td>${callSelect(c.call)}</td>
-    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?`<span class="down" style="font-size:11px" title="Type in the Ticker box and pick the exact listing (with its exchange) from the dropdown">⚠ pick</span>`:"–")}</td>
+    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?`<span style="font-size:11px;color:var(--accent)" title="Type in the Ticker box and pick the exact listing (with its exchange) from the dropdown">⚠ pick</span>`:"–")}</td>
     <td><input class="cell w-dt" data-f="exitDate" type="date" value="${esc(c.exitDate||"")}"></td>
     <td class="num">${s.exitPx!=null?money(s.exitPx,ccy):"–"}</td>
     <td class="num">${pctSpan(s.stockRet)}</td>
