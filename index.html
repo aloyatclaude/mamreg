@@ -138,7 +138,7 @@ const SUFFIX_COUNTRY={".HK":"HK",".SS":"CN",".SZ":"CN",".NS":"IN",".BO":"IN",".T
 const SUFFIX_CCY={".HK":"HKD",".SS":"CNY",".SZ":"CNY",".NS":"INR",".BO":"INR",".TW":"TWD",".TWO":"TWD",".KS":"KRW",".KQ":"KRW",".SI":"SGD",".KL":"MYR",".BK":"THB",".JK":"IDR",".PS":"PHP",".T":"JPY",".L":"GBP",".AX":"AUD",".TO":"CAD",".DE":"EUR",".PA":"EUR"};
 const BENCH_NAME={"^HSI":"Hang Seng","000300.SS":"CSI 300","^CRSLDX":"Nifty 500","^BSESN":"Sensex","^TWII":"TAIEX","^KS11":"KOSPI","^STI":"STI","^KLSE":"KLCI","^SET.BK":"SET","^JKSE":"JKSE","PSEI.PS":"PSEi","^N225":"Nikkei","^GSPC":"S&P 500","^FTSE":"FTSE 100","^AXJO":"ASX 200","^GSPTSE":"TSX","^GDAXI":"DAX","^FCHI":"CAC 40"};
 const CUR_SYM={INR:"₹",TWD:"NT$",KRW:"₩",USD:"$",HKD:"HK$",JPY:"¥",CNY:"¥",SGD:"S$",MYR:"RM",THB:"฿",IDR:"Rp",PHP:"₱",GBP:"£",EUR:"€",AUD:"A$",CAD:"C$"};
-const COUNTRIES=[["HK","Hong Kong"],["CN","China"],["IN","India"],["TW","Taiwan"],["KR","Korea"],["ASEAN","ASEAN"],["US","United States"],["JP","Japan"],["UK","UK"],["EU","Europe"],["AU","Australia"],["CA","Canada"]];
+const COUNTRIES=[["HK","Hong Kong"],["CN","China"],["IN","India"],["TW","Taiwan"],["KR","Korea"],["ASEAN","ASEAN"]];
 const WORKER=(location.hostname==="localhost"||location.hostname==="127.0.0.1")?"http://127.0.0.1:8787":"https://mamreg-api.mamreg.workers.dev";
 const LS_BOOK="grp-book-v3", LS_TOKEN="grp-write-token", LS_PRICES="grp-prices-v1";
 const TABS=[["analysts","Analysts"],["holdings","Holdings"]];
@@ -206,7 +206,7 @@ async function load(){
   parseHash();
   if(!selAnalyst&&BOOK.analysts[0]) selAnalyst=BOOK.analysts[0].id;
   buildNav(); render();
-  document.getElementById("foot").innerHTML=`Live prices via Yahoo · indicative<br><a href="#" id="lockBtn" style="color:var(--muted)">Lock</a> · returns from adjusted closes`;
+  document.getElementById("foot").innerHTML=`<a href="#" id="lockBtn" style="color:var(--muted)">Log Out</a>`;
   const lb=document.getElementById("lockBtn"); if(lb) lb.onclick=e=>{e.preventDefault(); if(_poll)clearInterval(_poll); localStorage.removeItem(LS_TOKEN); showGate("Locked. Enter the password to continue.");};
   await priceAll(); render();
   // auto-resolve any already-saved rows whose ticker can't be priced (e.g. bare codes typed earlier)
@@ -526,7 +526,7 @@ function covTotal(o){
   return {abs, rel:(abs!=null&&b!=null)?abs-b:null, from};
 }
 function covCurrent(o){ const p=covPeriods(o); return p.length?p[p.length-1]:null; }  // the current (latest) call; end=closeDate when closed
-function coverageRow(o){
+function coverageRow(o){   // ACTIVE / no-call rows (closed rows render via coverageClosedRow)
   const ccy=ccyFromTicker(o.ticker), px=livePrice(o.ticker), bench=benchFromTicker(o.ticker), benchNm=BENCH_NAME[bench]||"";
   const state=covState(o), open=openCov.has(o.id), nActive=activeSorted(o).length, nAll=(o.history||[]).length;
   const priced=!!(o.ticker&&SORTED[o.ticker]&&SORTED[o.ticker].length);
@@ -537,31 +537,51 @@ function coverageRow(o){
   const entryPxCell=now
     ? (entryPx!=null?money(entryPx,ccy):entryHint({ticker:o.ticker,entryDate:now.date,name:o.name}))
     : (o.ticker&&!priced?entryHint({ticker:o.ticker,name:o.name}):"–");
-  const ratingCell = state==="closed" ? ratingPill("CLOSED")
-    : state==="active" ? ratingPill(currentRating(o))
-    : `<span class="flat">–</span>`;
-  const btn=(attr,label,title,cls)=>`<button class="btn sm ${cls||""}" ${attr}="${o.id}" style="padding:2px 9px" title="${title}">${label}</button>`;
-  const actionsCell = state==="none"
-    ? btn("data-covchange","Set call","Record your first call (rating + date)")
-    : state==="active"
-      ? btn("data-covchange","Change","Log a new dated call (the current one ends then)")+" "+btn("data-covclose","Close","Freeze this call's return on a date","ghost")
-      : btn("data-covchange","Change","Start a new call (reopens coverage)")+" "+btn("data-covreopen","Reopen","Resume the last call (un-close)","ghost");
+  const ratingCell = state==="active" ? ratingPill(currentRating(o)) : `<span class="flat">–</span>`;
+  const changeCell = state==="active"
+    ? `<button class="btn sm" data-covchange="${o.id}" style="padding:2px 9px" title="Log a new dated call (the current one ends then)">Change</button>`
+    : `<button class="btn sm" data-covchange="${o.id}" style="padding:2px 9px" title="Record your first call (rating + date)">Set call</button>`;
   const histCell=nAll
     ? `<span data-covtoggle style="cursor:pointer;user-select:none;color:var(--text-2)" title="Call history">${open?"▾":"▸"} ${nActive}</span>`
     : `<span class="flat">–</span>`;
+  const lastCell = state==="active"
+    ? `<button class="btn sm" data-covclose="${o.id}" style="padding:2px 9px" title="Close this call — freeze the return on a date and move it to Closed calls">Close call</button>`
+    : `<span class="del" data-del title="Delete this empty name">✕</span>`;
   const main=`<tr data-id="${o.id}" data-coll="coverage">
     <td>${entryCell}</td>
     <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(o.ticker||"")}" placeholder="TICKER.XX"></td>
     <td><input class="cell" data-f="name" style="min-width:150px;text-align:left;font-family:'Manrope'" value="${esc(o.name||"")}" placeholder="(auto)"></td>
     <td>${ratingCell}</td>
-    <td style="white-space:nowrap">${actionsCell}</td>
+    <td style="white-space:nowrap">${changeCell}</td>
     <td class="num">${entryPxCell}</td>
     <td class="num">${px!=null?money(px,ccy):"–"}</td>
     <td class="num">${pctSpan(now?now.abs:null)}</td>
     <td class="num">${(now&&now.rel!=null)?pctSpan(now.rel)+(benchNm?` <span class="tag">${esc(benchNm)}</span>`:""):'<span class="flat">–</span>'}</td>
     <td class="num">${histCell}</td>
     <td>${noteIcon("coverage",o,"Comment")}</td>
-    <td><span class="del" data-del>✕</span></td></tr>`;
+    <td style="white-space:nowrap">${lastCell}</td></tr>`;
+  return main+(open?coverageDetail(o):"");
+}
+function coverageClosedRow(o){   // a closed coverage name — Alpha-closed style + history dropdown + Reopen
+  const ccy=ccyFromTicker(o.ticker), bench=benchFromTicker(o.ticker), benchNm=BENCH_NAME[bench]||"";
+  const open=openCov.has(o.id), nAll=(o.history||[]).length;
+  const now=covCurrent(o), entryPx=now?oob(o.ticker,now.date):null, closePx=o.closeDate?oob(o.ticker,o.closeDate):null;
+  const histCell=nAll
+    ? `<span data-covtoggle style="cursor:pointer;user-select:none;color:var(--text-2)" title="Call history">${open?"▾":"▸"} ${nAll}</span>`
+    : `<span class="flat">–</span>`;
+  const main=`<tr data-id="${o.id}" data-coll="coverage">
+    <td><span style="font-family:var(--mono);font-size:12px">${now?fmtDate(now.date):"–"}</span></td>
+    <td style="font-family:var(--mono);font-size:12px">${esc(o.ticker||"–")}</td>
+    <td style="font-family:'Manrope'">${esc(o.name||"")}</td>
+    <td>${now?ratingPill(now.rating):`<span class="flat">–</span>`}</td>
+    <td class="num">${entryPx!=null?money(entryPx,ccy):"–"}</td>
+    <td><span style="font-family:var(--mono);font-size:12px">${o.closeDate?fmtDate(o.closeDate):"–"}</span></td>
+    <td class="num">${closePx!=null?money(closePx,ccy):"–"}</td>
+    <td class="num">${pctSpan(now?now.abs:null)}</td>
+    <td class="num">${(now&&now.rel!=null)?pctSpan(now.rel)+(benchNm?` <span class="tag">${esc(benchNm)}</span>`:""):'<span class="flat">–</span>'}</td>
+    <td class="num">${histCell}</td>
+    <td>${noteIcon("coverage",o,"Comment")}</td>
+    <td style="white-space:nowrap"><button class="btn sm ghost" data-covreopen="${o.id}" style="padding:2px 9px" title="Reopen — resume this call (un-close)">Reopen</button></td></tr>`;
   return main+(open?coverageDetail(o):"");
 }
 function coverageDetail(o){
@@ -590,11 +610,16 @@ function coverageDetail(o){
 }
 function coverageTable(){
   const rows=(BOOK.coverage||[]).filter(o=>o.analyst===selAnalyst);
+  const active=rows.filter(o=>covState(o)!=="closed"), closed=rows.filter(o=>covState(o)==="closed");
   const head=`<tr><th style="text-align:left">Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Rating</th><th>Change Call</th><th class="num">Entry price</th><th class="num">Last price</th><th class="num">Return</th><th class="num">vs Index</th><th class="num">History</th><th>Comment</th><th></th></tr>`;
-  const body=rows.length?rows.map(coverageRow).join(""):emptyRow(12,"No coverage yet — click + Add name.");
-  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. Type a <b>Ticker</b> (pick the exact listing), then <b>Set call</b> to record your rating and the <b>date you made the call</b>. Calls are a <b>locked record</b> — you can't edit them; you can only <b>Change</b> (log a new dated call), <b>Close</b> (freeze the return &amp; mark Closed), or <b>✕</b> delete (kept in the History's Deleted list). <b>Entry date / Entry price / Return / vs Index</b> reflect your <b>current call</b> (Entry price → Last price). Open <b>History</b> (▸) for the full call log and the <b>lifetime</b> total. Click <b>💬 Comment</b> to record the thesis readers see.</div>
+  const body=active.length?active.map(coverageRow).join(""):emptyRow(12,"No coverage yet — click + Add name.");
+  const closedHead=`<tr><th style="text-align:left">Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Rating</th><th class="num">Entry price</th><th>Close date</th><th class="num">Close price</th><th class="num">Return</th><th class="num">vs Index</th><th class="num">History</th><th>Comment</th><th></th></tr>`;
+  const closedTable = closed.length ? `<div style="margin-top:24px" class="desc"><b>Closed calls</b> — coverage you've closed; returns are <b>frozen</b> at the close date. Open <b>History</b> (▸) for the full call log; <b>Reopen</b> to resume.</div>
+    <div class="tw"><table><thead>${closedHead}</thead><tbody>${closed.map(coverageClosedRow).join("")}</tbody></table></div>` : "";
+  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. Type a <b>Ticker</b> (pick the exact listing), then <b>Set call</b> to record your rating and the <b>date you made the call</b>. Calls are a <b>locked record</b> — you can't edit them; you can only <b>Change</b> (log a new dated call) or <b>Close call</b> (freeze the return &amp; move it to <b>Closed calls</b> below). <b>Entry date / Entry price / Return / vs Index</b> reflect your <b>current call</b> (Entry price → Last price). Open <b>History</b> (▸) for the full call log and the <b>lifetime</b> total. Click <b>💬 Comment</b> to record the thesis readers see.</div>
     <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>
-    <div class="addbar"><button class="btn sm" data-addcov>+ Add name</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search — name and price fill in automatically. Independent of your timed Alpha calls.</span></div>`;
+    <div class="addbar"><button class="btn sm" data-addcov>+ Add name</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search — name and price fill in automatically. Independent of your timed Alpha calls.</span></div>
+    ${closedTable}`;
 }
 function noteIcon(coll,o,label){
   const has=!!(o.rationale&&o.rationale.trim());
