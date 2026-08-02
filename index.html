@@ -203,6 +203,8 @@ async function load(){
   document.getElementById("foot").innerHTML=`Live prices via Yahoo · indicative<br><a href="#" id="lockBtn" style="color:var(--muted)">Lock</a> · returns from adjusted closes`;
   const lb=document.getElementById("lockBtn"); if(lb) lb.onclick=e=>{e.preventDefault(); if(_poll)clearInterval(_poll); localStorage.removeItem(LS_TOKEN); showGate("Locked. Enter the password to continue.");};
   await priceAll(); render();
+  // auto-resolve any already-saved rows whose ticker can't be priced (e.g. bare codes typed earlier)
+  for(const t of [...new Set([...BOOK.calls,...BOOK.holdings].map(o=>o.ticker).filter(t=>t&&!PRICES.closes[t]))]) await ensurePriced(t);
   startPolling();
   if(qs.has("pdftest")) setTimeout(()=>reviewHoldings(parseHoldingsText(SAMPLE_STMT),"self-test sample"),300);
   if(qs.get("ddtest")) setTimeout(async()=>{ addCall(); const inp=document.querySelector('input.cell[data-f="ticker"]'); if(inp){ inp.focus(); inp.value=qs.get("ddtest"); await runSearch(inp,qs.get("ddtest")); } },500);
