@@ -1,17 +1,13 @@
 name: Deploy to Pages
 
-# Refreshes prices at build time and deploys the static site to GitHub Pages.
-# Generated prices are NOT committed (no git history bloat) — they live only in the
-# deployed artifact. Pushing an updated data/book.json triggers a fresh build.
+# Deploys the static site to GitHub Pages. Prices are now fetched live in the browser
+# via the Cloudflare Worker, and the book lives in the Worker's KV — so there is no
+# build-time price fetch. A push to main (e.g. editing index.html) triggers a deploy.
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    # every 30 min, weekdays, across the global market window (00:00–22:00 UTC:
-    # Asia open through the US close). GitHub cron is best-effort.
-    - cron: "*/30 0-22 * * 1-5"
 
 permissions:
   contents: read
@@ -30,13 +26,6 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Fetch live prices (Yahoo, keyless)
-        run: python3 scripts/fetch_prices.py
-      - name: Audit calls (non-blocking)
-        run: python3 scripts/verify_calls.py || true
       - name: Stage site
         run: |
           mkdir -p _site

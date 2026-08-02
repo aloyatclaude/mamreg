@@ -1,39 +1,40 @@
 # CLAUDE.md — Research Portal (mamreg)
 
-Static, backend-less dashboard to **record & grade stock calls by analyst**, plus holdings by
-country. Served from GitHub Pages (`mamreg/mamreg`); prices fetched at deploy time.
+Dashboard to **record & grade stock calls by analyst**, plus holdings by country. Static
+`index.html` on GitHub Pages (`mamreg/mamreg`) **+ a Cloudflare Worker** (`worker/`) that proxies
+Yahoo (live search + prices) and stores the book in KV.
 
-## Architecture (keep it this way)
+## Architecture
 
-- **`index.html`** — the whole app: one self-contained file, inline CSS + vanilla JS, **Chart.js**
-  and **pdf.js (v3 UMD)** via CDN. No framework, no build step. Dark theme. Deep-linkable via
-  `#analysts/<id>/<section>` and `#holdings`.
-- **`data/book.json`** — canonical, committed, human-owned: `analysts[] · holdings[] · calls[]`
-  (no more overview/watchlist). Source of truth; git history = audit trail.
-- **`data/prices.json`** — generated every deploy by `fetch_prices.py`; **never commit it**.
-- **`scripts/*.py`** — **stdlib only, no keys**. `verify_calls.py` must stay numerically identical
-  to `scoreCall` in `index.html`.
-- **`.github/workflows/deploy.yml`** — fetch prices → audit (non-blocking) → deploy to Pages.
+- **`index.html`** — the whole app: one file, inline CSS + vanilla JS, Chart.js + pdf.js via CDN.
+  `WORKER` constant = the Cloudflare Worker base URL (auto-uses `http://127.0.0.1:8787` on localhost).
+  **No buttons** — edits auto-save to the Worker/KV (debounced `pushBook`, one-time `WRITE_TOKEN`
+  passphrase). Prices are fetched **live** from the Worker (`fetchChart`→`chartToData` builds the
+  same `PRICES{quotes,closes}` the old static feed did); cached in localStorage ~15 min.
+- **`worker/worker.js`** — routes `/search`, `/chart` (Yahoo proxy, CORS, ~15-min edge cache) and
+  `GET/PUT /book` (KV `BOOK_KV`, PUT needs `Bearer WRITE_TOKEN`). Deploy per `worker/README.md`.
+- **`data/book.json`** — SEED only (used until KV has data). **`scripts/*.py`** are local-audit
+  only (not in the runtime path). `.github/workflows/deploy.yml` just deploys the static site.
 
 ## Two tabs
 
-- **Analysts** → per-analyst summary + segmented **Calls (open) / Historical Trades (closed) /
-  Coverage List**. Calls tables are editable (record calls here).
+- **Analysts** → per-analyst summary + **Alpha** (open table + Closed table below) and
+  **Coverage List**. Alpha columns: Entry date · Ticker(search dropdown) · Stock(auto) · Call ·
+  Entry cost · Return · Index return(+bench tag) · Return vs index · Result · Close.
 - **Holdings** → grouped by country (HK/CN/IN/TW/KR/ASEAN); Cost · LTP · 1D/1W/1M/YTD · Return.
-  PDF upload → parse → review modal → fill.
+  PDF upload → heuristic parse → review modal.
 
 ## Invariants (don't quietly change)
 
-- Benchmark / currency / country resolve from the **Yahoo ticker suffix** — one map, mirrored in
-  `index.html` (`SUFFIX_*`), `fetch_prices.py` and `verify_calls.py`. Change all three together.
-- Call scoring: adjusted closes, date-driven; `alpha = stockRet − benchRet`; Buy hits α>0, Sell
-  hits α<0, **Hold excluded** from hit-rate. Holdings use cost basis (`LTP/entry−1`).
-- pdf.js runs **in the browser**; PDF rows are always shown in a **review modal** before saving.
-  Optional Claude key (`localStorage` `grp-claude-key`) upgrades extraction; GitHub token
-  (`grp-gh-token`) powers **Publish** (GitHub Contents API → commit `book.json`).
+- Benchmark/currency/country resolve from the **Yahoo ticker suffix** (`SUFFIX_*` maps).
+- Call scoring (`scoreCall`): adjusted closes, date-driven; `alpha = stockRet − benchRet`;
+  Buy hits α>0, Sell hits α<0, **Hold excluded** from hit-rate. Holdings use cost basis.
+- All live data goes through the Worker (Yahoo blocks direct browser calls — CORS). Don't add
+  browser→Yahoo fetches.
 
 ## Verify a change
 
-`python3 scripts/fetch_prices.py && python3 scripts/verify_calls.py && python3 -m http.server 8765`
-then screenshot headless Chrome at `#analysts/mark/calls`, `#analysts/mark/historical`,
-`#holdings`, and `?pdftest` (runs the PDF parser on a built-in sample statement → review modal).
+`cd worker && npx wrangler dev --port 8787 --local` + `python3 -m http.server` for the site; open
+`http://localhost:<port>/#analysts/mark/calls`. Headless async (search/save) needs a real-time
+capture (CDP), not `--virtual-time-budget`; pass `?token=localdevsecret` so save doesn't block on
+the passphrase `prompt()`. `?ddtest=<q>` opens the ticker dropdown; `?pdftest` opens the PDF review.

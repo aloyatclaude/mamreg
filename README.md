@@ -3,53 +3,45 @@
 A single-page dashboard to **record and grade stock calls by analyst**, plus a light
 **holdings** view grouped by country. Live at https://mamreg.github.io/mamreg/.
 
-No backend — a static `index.html` on GitHub Pages; a scheduled GitHub Action refreshes prices
-at deploy time. Prices are indicative (delayed).
+Static `index.html` on GitHub Pages + a tiny **Cloudflare Worker** (`worker/`) that proxies Yahoo
+(live ticker search + prices) and stores your book in Cloudflare KV. No manual save/publish — edits
+auto-save to the cloud. Prices are indicative (delayed ~15 min via the Worker's cache).
 
 ## Two tabs
 
 - **Analysts** — one sub-tab per analyst (**Mark · Ang · Aloy**, add more with ＋). Each analyst
-  shows a summary — **overall return · hit rate · return vs benchmark · #calls** — then three
-  sections:
-  - **Calls** — the analyst's *open* calls, marked-to-market.
-  - **Historical Trades** — *closed* calls, with a realized subtotal (hit rate, avg return, avg vs-index).
+  shows a summary — **overall return · hit rate · return vs benchmark · #calls** — then:
+  - **Alpha** — open calls on top, **Closed calls** table below (with exit date + exit price).
+    Columns: Entry date · Ticker · Stock · Call · Entry cost · Return · Index return · Return vs
+    index · Result · Close.
   - **Coverage List** — the distinct names covered, with latest stance, price, #calls and hit rate.
-  Columns: Stock · Call · Entry · Exit · **Return** · **vs Index** · **+/− (alpha)** · Result.
-- **Holdings** — positions grouped by **country** (HK · China · India · Taiwan · Korea · ASEAN).
-  Columns: Stock · **Cost** · LTP · 1D · 1W · 1M · YTD · Return (LTP ÷ cost − 1). Upload a
-  statement **PDF** to auto-fill (below).
+- **Holdings** — positions grouped by **country** (HK · China · India · Taiwan · Korea · ASEAN):
+  Stock · **Cost** · LTP · 1D · 1W · 1M · YTD · Return. Upload a statement **PDF** to auto-fill.
 
 ## How it fits together
 
 ```
 index.html            single-file SPA (inline CSS+JS; Chart.js + pdf.js via CDN)
-data/book.json        CANONICAL data you own — analysts · holdings · calls
-data/prices.json      GENERATED each deploy by fetch_prices.py (adjusted closes + quotes + FX)
-scripts/fetch_prices.py   stdlib-only Yahoo fetcher (no API key)
-scripts/verify_calls.py   stdlib-only audit / reference scoring
-.github/workflows/deploy.yml   fetch prices → audit → deploy to Pages
+worker/worker.js       Cloudflare Worker: /search, /chart (Yahoo proxy) + /book (KV store)
+data/book.json         SEED book (analysts·holdings·calls) — used until the KV store has data
+scripts/*.py           stdlib-only fetcher + reference scorer (local auditing only, not runtime)
+.github/workflows/deploy.yml   deploy the static site to Pages
 ```
 
-`book.json` is the source of truth and version-controlled — its git history *is* your auditable
-track record. `prices.json` is disposable and rebuilt every deploy (never committed).
+The live book lives in the Worker's **KV** (auto-saved from the browser). `data/book.json` is only
+the initial seed. Set the Worker URL as `WORKER` in `index.html`. See **`worker/README.md`** for the
+one-time deploy.
 
-## Editing the data (three ways)
+### How to add a stock (no buttons, fully automatic)
 
-1. **In the browser** — every table is editable; add/delete rows inline. Changes save to your
-   browser's localStorage. To make them live, click **Export** and commit the file, or **Publish**
-   (below).
-2. **Edit `data/book.json`** directly and commit. A push to `main` redeploys.
-3. **Publish** — with a GitHub token saved in **Settings**, the Publish button commits `book.json`
-   straight to the repo via the GitHub API → the deploy Action redeploys. (Token is stored only in
-   your browser; use a fine-grained token limited to this repo's *Contents: read & write*.)
-
-### How to add a stock
-
-- **A call:** Analysts → pick the analyst → **Alpha** tab → **＋ Add call** → type Company,
-  Ticker (with suffix), pick Buy/Sell/Hold, set the Entry date. Leave Exit blank = open; set an
-  Exit date to move it to **Historical Trades**. Return / vs-Index / hit rate compute automatically.
-- **A holding:** **Holdings** → **＋ Add holding** → Company, Ticker, Cost. Country + benchmark are
-  inferred from the ticker suffix; the row drops into the right country group.
+- **A call:** Analysts → pick the analyst → **Alpha** → **＋ Add call** → set the **Entry date**,
+  then **type in the Ticker box** and pick from the live dropdown. Name, entry cost, return, index
+  return and result fill in automatically. Click **Close** (pick an exit date) to move it to the
+  Closed table. Everything auto-saves to the cloud.
+- **A holding:** **Holdings** → **＋ Add holding** → type the ticker (dropdown) + cost; or upload a
+  statement PDF and review.
+- **Save passphrase:** the first time you edit, you're asked once for the Worker's `WRITE_TOKEN`
+  (cached in your browser). That's the only prompt, ever.
 - **Prices for a new ticker** appear only after you **Publish** (or Export + commit) — the fetcher
   reads tickers from the committed `book.json`, so until then the price shows "–".
 

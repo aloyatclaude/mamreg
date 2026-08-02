@@ -1,0 +1,13 @@
+name = "mamreg-api"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Create with:  npx wrangler kv namespace create BOOK_KV
+# then paste the printed id below (a local id is auto-used by `wrangler dev`).
+kv_namespaces = [
+  { binding = "BOOK_KV", id = "REPLACE_WITH_KV_ID" }
+]
+
+# WRITE_TOKEN is a secret:
+#   local dev  → worker/.dev.vars   (WRITE_TOKEN=…)
+#   production → npx wrangler secret put WRITE_TOKEN

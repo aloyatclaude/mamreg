@@ -122,10 +122,7 @@ select.cell{cursor:pointer; -webkit-appearance:none; appearance:none}
     <div class="topbar">
       <div><h1 id="viewTitle">Analysts</h1><div class="sub" id="viewSub"></div></div>
       <div class="tb-actions">
-        <button class="btn ghost sm" id="btnSettings" title="API key & GitHub token">⚙ Settings</button>
-        <button class="btn ghost sm" id="btnReset" title="Discard local edits, reload published book">Reset</button>
-        <button class="btn sm" id="btnExport" title="Download book.json">Export</button>
-        <button class="btn gold sm" id="btnPublish" title="Commit book.json to the repo (needs token)">Publish</button>
+        <span id="sync" class="small"></span>
       </div>
     </div>
     <div id="views"></div>
@@ -142,8 +139,8 @@ const SUFFIX_CCY={".HK":"HKD",".SS":"CNY",".SZ":"CNY",".NS":"INR",".BO":"INR",".
 const BENCH_NAME={"^HSI":"Hang Seng","000300.SS":"CSI 300","^CRSLDX":"Nifty 500","^BSESN":"Sensex","^TWII":"TAIEX","^KS11":"KOSPI","^STI":"STI","^KLSE":"KLCI","^SET.BK":"SET","^JKSE":"JKSE","^PSI":"PSEi","^N225":"Nikkei","^GSPC":"S&P 500"};
 const CUR_SYM={INR:"₹",TWD:"NT$",KRW:"₩",USD:"$",HKD:"HK$",JPY:"¥",CNY:"¥",SGD:"S$",MYR:"RM",THB:"฿",IDR:"Rp",PHP:"₱"};
 const COUNTRIES=[["HK","Hong Kong"],["CN","China"],["IN","India"],["TW","Taiwan"],["KR","Korea"],["ASEAN","ASEAN"],["US","United States"],["JP","Japan"]];
-const REPO="mamreg/mamreg";
-const LS_BOOK="grp-book-v2", LS_CLAUDE="grp-claude-key", LS_GH="grp-gh-token";
+const WORKER=(location.hostname==="localhost"||location.hostname==="127.0.0.1")?"http://127.0.0.1:8787":"__WORKER_URL__";
+const LS_BOOK="grp-book-v3", LS_TOKEN="grp-write-token", LS_PRICES="grp-prices-v1";
 const TABS=[["analysts","Analysts"],["holdings","Holdings"]];
 const ANALYST_COLORS=["#3987e5","#199e70","#c98500","#9085e9","#e66767","#d55181"];
 
@@ -157,26 +154,87 @@ let SORTED={};
 let view="analysts", selAnalyst=null, section="calls";
 let charts={};
 
-/* ---------- load / save ---------- */
+/* ---------- load / save (book in Cloudflare KV via the Worker) ---------- */
 async function load(){
-  const [bk,pr]=await Promise.all([
-    fetch("data/book.json").then(r=>r.json()),
-    fetch("data/prices.json").then(r=>r.ok?r.json():null).catch(()=>null)
-  ]);
-  SEED=bk;
-  const saved=localStorage.getItem(LS_BOOK);
-  BOOK=saved?JSON.parse(saved):structuredClone(bk);
+  const qs=new URLSearchParams(location.search);
+  if(qs.get("token")) localStorage.setItem(LS_TOKEN, qs.get("token"));   // dev convenience
+  try{ SEED=await fetch("data/book.json").then(r=>r.json()); }catch(e){ SEED={analysts:[],holdings:[],calls:[]}; }
+  let book=null;
+  try{ const r=await fetch(`${WORKER}/book`); if(r.ok){ const b=await r.json(); if(b&&(b.calls||b.holdings||b.analysts)) book=b; } }catch(e){}
+  if(!book){ const ls=localStorage.getItem(LS_BOOK); if(ls){ try{book=JSON.parse(ls);}catch(e){} } }
+  BOOK=book?book:structuredClone(SEED);
   if(!BOOK.holdings)BOOK.holdings=[]; if(!BOOK.calls)BOOK.calls=[]; if(!BOOK.analysts)BOOK.analysts=[];
-  if(pr) PRICES=pr;
-  SORTED={}; for(const s in PRICES.closes) SORTED[s]=Object.keys(PRICES.closes[s]).sort();
+  loadCachedPrices();
   parseHash();
   if(!selAnalyst&&BOOK.analysts[0]) selAnalyst=BOOK.analysts[0].id;
   buildNav(); render();
-  const gen=PRICES.generated?new Date(PRICES.generated):null;
-  document.getElementById("foot").innerHTML=`Prices: Yahoo, indicative<br>${gen?("refreshed "+gen.toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})):"no price feed"}<br><span class="small">returns from adjusted closes</span>`;
-  if(new URLSearchParams(location.search).has("pdftest")) setTimeout(()=>reviewHoldings(parseHoldingsText(SAMPLE_STMT),"self-test sample"),300);
+  document.getElementById("foot").innerHTML=`Live prices via Yahoo · indicative<br><span class="small">returns from adjusted closes</span>`;
+  await priceAll(); render();
+  if(qs.has("pdftest")) setTimeout(()=>reviewHoldings(parseHoldingsText(SAMPLE_STMT),"self-test sample"),300);
+  if(qs.get("ddtest")) setTimeout(async()=>{ addCall(); const inp=document.querySelector('input.cell[data-f="ticker"]'); if(inp){ inp.focus(); inp.value=qs.get("ddtest"); await runSearch(inp,qs.get("ddtest")); } },500);
 }
-function save(){BOOK.updated=new Date().toISOString().slice(0,10); localStorage.setItem(LS_BOOK,JSON.stringify(BOOK));}
+let _saveTimer=null;
+function save(){
+  BOOK.updated=new Date().toISOString().slice(0,10);
+  try{ localStorage.setItem(LS_BOOK,JSON.stringify(BOOK)); }catch(e){}
+  clearTimeout(_saveTimer); _saveTimer=setTimeout(pushBook,900); syncStatus("saving");
+}
+async function pushBook(){
+  const token=localStorage.getItem(LS_TOKEN)||"";
+  try{
+    const r=await fetch(`${WORKER}/book`,{method:"PUT",headers:{"content-type":"application/json",authorization:"Bearer "+token},body:JSON.stringify(BOOK)});
+    if(r.status===401){ const t=prompt("One-time save passphrase (the WRITE_TOKEN you set on the backend):"); if(t){ localStorage.setItem(LS_TOKEN,t); return pushBook(); } syncStatus("unsaved"); return; }
+    syncStatus(r.ok?"saved":"error");
+  }catch(e){ syncStatus("offline"); }
+}
+function syncStatus(s){ const el=document.getElementById("sync"); if(!el)return;
+  const map={saving:"saving…",saved:"saved ✓","":"",error:"save error",offline:"offline · saved on this device",unsaved:"not saved — passphrase needed"};
+  el.textContent=map[s]??s; el.style.color=(s==="error"||s==="unsaved")?"var(--down)":"var(--muted)";
+  if(s==="saved") setTimeout(()=>{if(el.textContent==="saved ✓")el.textContent="";},1500);
+}
+
+/* ---------- live pricing via the Worker (same PRICES shape as before) ---------- */
+function chartToData(js){
+  const res=js&&js.chart&&js.chart.result&&js.chart.result[0]; if(!res) return null;
+  const meta=res.meta||{}, ts=res.timestamp||[], ind=res.indicators||{};
+  const adj=(ind.adjclose&&ind.adjclose[0]&&ind.adjclose[0].adjclose)||null;
+  const raw=(ind.quote&&ind.quote[0]&&ind.quote[0].close)||null;
+  const series=adj||raw||[]; const gmt=meta.gmtoffset||0; const closes={};
+  for(let i=0;i<ts.length;i++){ const v=series[i]; if(v==null)continue; const d=new Date((ts[i]+gmt)*1000).toISOString().slice(0,10); closes[d]=+(+v).toFixed(4); }
+  const dates=Object.keys(closes).sort(); if(!dates.length) return {closes:{},quote:null};
+  const last=closes[dates[dates.length-1]];
+  const price=meta.regularMarketPrice!=null?meta.regularMarketPrice:last;
+  const prev=dates.length>1?closes[dates[dates.length-2]]:null;
+  const now=new Date(); const ago=d=>{const x=new Date(now);x.setDate(x.getDate()-d);return x.toISOString().slice(0,10);};
+  const back=dates.slice(0,-1);
+  const oobL=t=>{let lo=0,hi=back.length-1,r=null;while(lo<=hi){const m=(lo+hi)>>1;if(back[m]<=t){r=m;lo=m+1;}else hi=m-1;}return r===null?null:closes[back[r]];};
+  const pct=(a,b)=>(a==null||!b)?null:+(((a/b-1)*100).toFixed(2));
+  const quote={price:+(+price).toFixed(4),prevClose:prev,currency:meta.currency,name:meta.longName||meta.shortName||null,
+    d1:pct(last,prev),w1:pct(last,oobL(ago(7))),m1:pct(last,oobL(ago(30))),ytd:pct(last,oobL((now.getFullYear()-1)+"-12-31")),asof:dates[dates.length-1]};
+  return {closes,quote};
+}
+async function fetchChart(sym){
+  if(!sym||PRICES.closes[sym]) return;
+  try{ const r=await fetch(`${WORKER}/chart?symbol=${encodeURIComponent(sym)}&range=2y`); if(!r.ok)return;
+    const d=chartToData(await r.json()); if(d){ PRICES.closes[sym]=d.closes; if(d.quote)PRICES.quotes[sym]=d.quote; SORTED[sym]=Object.keys(d.closes).sort(); }
+  }catch(e){}
+}
+function neededSymbols(){ const s=new Set();
+  [...(BOOK.holdings||[]),...(BOOK.calls||[])].forEach(o=>{ if(o.ticker){ s.add(o.ticker); s.add(benchFromTicker(o.ticker)); } });
+  return [...s].filter(x=>x&&!PRICES.closes[x]); }
+async function priceAll(){ const list=neededSymbols(); const C=6;
+  for(let i=0;i<list.length;i+=C){ await Promise.all(list.slice(i,i+C).map(fetchChart)); } cachePrices(); }
+async function ensurePriced(ticker){
+  if(!ticker) return;
+  const need=[ticker,benchFromTicker(ticker)].filter(s=>s&&!PRICES.closes[s]);
+  if(need.length) await Promise.all(need.map(fetchChart));
+  const q=PRICES.quotes[ticker];
+  if(q&&q.name){ [...(BOOK.calls||[]),...(BOOK.holdings||[])].forEach(o=>{ if(o.ticker===ticker&&!o.name)o.name=q.name; }); }
+  cachePrices(); save(); render();
+}
+function cachePrices(){ try{ localStorage.setItem(LS_PRICES,JSON.stringify({t:Date.now(),quotes:PRICES.quotes,closes:PRICES.closes})); }catch(e){} }
+function loadCachedPrices(){ try{ const c=JSON.parse(localStorage.getItem(LS_PRICES)||"null");
+  if(c&&Date.now()-c.t<15*60*1000){ PRICES.quotes=c.quotes||{}; PRICES.closes=c.closes||{}; SORTED={}; for(const s in PRICES.closes)SORTED[s]=Object.keys(PRICES.closes[s]).sort(); } }catch(e){} }
 
 /* ---------- price helpers (identical logic to scripts/verify_calls.py) ---------- */
 function oob(sym,target){
@@ -313,7 +371,7 @@ function alphaOpenTable(rows){
   const body=rows.length?rows.map(alphaOpenRow).join(""):emptyRow(10,"No open calls yet — click + Add call.");
   return `<div class="desc">Key in <b>Entry date</b> → <b>Ticker</b> and the row auto-fills. Entry cost = closing price on the entry date · Return = today ÷ entry cost · Index return = that market's index · Return vs index = alpha. Hit/miss on alpha (Hold excluded; <b>*</b> = open, marked-to-market).</div>
     <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody>${foot?`<tfoot>${foot}</tfoot>`:""}</table></div>
-    <div class="addbar"><button class="btn sm" data-addcall>+ Add call</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Ticker = Yahoo symbol with suffix (2330.TW · 0700.HK · RELIANCE.NS · 005930.KS). A new ticker shows values after Publish.</span></div>`;
+    <div class="addbar"><button class="btn sm" data-addcall>+ Add call</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search any stock — name, entry cost and returns fill in automatically.</span></div>`;
 }
 function alphaClosedTable(rows){
   if(!rows.length) return `<div style="margin-top:20px" class="desc"><b>Closed calls</b> — none yet. Use the <b>Close</b> button on an open call.</div>`;
@@ -370,7 +428,7 @@ function renderHoldings(){
   return `<div class="panel"><h2>Holdings</h2><div class="desc">Grouped by country. Cost = your entry price. LTP, 1D/1W/1M/YTD from the price feed. Return = LTP ÷ cost − 1.</div>
     <div style="margin-bottom:12px">${pills}</div>
     <div class="tw"><table><thead>${head}</thead><tbody>${groups}</tbody></table></div>
-    <div class="addbar"><button class="btn sm" data-addhold>+ Add holding</button><button class="btn sm gold" id="btnPdf">⬆ Upload statement (PDF)</button><input type="file" id="pdfInput" accept="application/pdf" class="hidden"><span class="small">Ticker = Yahoo symbol with exchange suffix (2330.TW · 0700.HK · RELIANCE.NS · 005930.KS · AAPL). PDF is read in your browser; you review before anything is added.</span></div></div>`;
+    <div class="addbar"><button class="btn sm" data-addhold>+ Add holding</button><button class="btn sm gold" id="btnPdf">⬆ Upload statement (PDF)</button><input type="file" id="pdfInput" accept="application/pdf" class="hidden"><span class="small">Type in the <b>Ticker</b> box to search. Or upload a statement PDF — read in your browser; you review before anything is added.</span></div></div>`;
 }
 
 /* ---------- editing / events ---------- */
@@ -386,13 +444,15 @@ function wire(){
     let val=e.target.value;
     if(NUMF.has(f)) val=val===""?null:parseFloat(val);
     if(f==="exitDate"&&val==="") val=null;
-    obj[f]=val; if(f==="ticker"){obj.country=countryFromTicker(val)||obj.country; obj.currency=ccyFromTicker(val); if(!obj.name){const q=quote(val); if(q&&q.name) obj.name=q.name;}}
+    obj[f]=val;
+    if(f==="ticker"){ obj.country=countryFromTicker(val); obj.currency=ccyFromTicker(val); save(); ensurePriced(val); return; }
     save(); if(RENDER_ON.has(f)) render();
   }));
   v.querySelectorAll("[data-del]").forEach(d=>d.onclick=e=>{const tr=e.target.closest("tr"); BOOK[tr.dataset.coll]=BOOK[tr.dataset.coll].filter(o=>o.id!==tr.dataset.id); save(); render();});
   const addC=v.querySelector("[data-addcall]"); if(addC) addC.onclick=addCall;
   const addH=v.querySelector("[data-addhold]"); if(addH) addH.onclick=addHolding;
   v.querySelectorAll("[data-close]").forEach(b=>b.onclick=e=>closeCallModal(e.target.closest("tr").dataset.id));
+  attachTickerSearch();
   v.querySelectorAll("[data-chart]").forEach(s=>s.onclick=()=>openChart(s.dataset.chart,s.dataset.nm));
   const pdfBtn=v.querySelector("#btnPdf"), pdfIn=v.querySelector("#pdfInput");
   if(pdfBtn&&pdfIn){ pdfBtn.onclick=()=>pdfIn.click(); pdfIn.onchange=e=>{const f=e.target.files[0]; if(f) handlePdf(f); e.target.value="";}; }
@@ -410,6 +470,33 @@ function closeCallModal(id){
     <div class="addbar"><button class="btn gold" id="closeGo">Close call</button><button class="btn ghost" id="closeCancel">Cancel</button></div></div></div>`;
   root.querySelector("#mx").onclick=root.querySelector("#closeCancel").onclick=()=>root.innerHTML="";
   root.querySelector("#closeGo").onclick=()=>{const d=root.querySelector("#closeDate").value; if(!d){alert("Pick an exit date.");return;} c.exitDate=d; save(); root.innerHTML=""; render();};
+}
+
+/* ---------- ticker search dropdown (live via Worker) ---------- */
+let _dd=null,_ddT=null;
+function ensureDD(){ if(!_dd){ _dd=document.createElement("div"); _dd.id="tickerDD"; _dd.style.cssText="position:absolute;z-index:90;display:none;background:var(--surface);border:1px solid var(--border-2);border-radius:9px;box-shadow:0 10px 28px rgba(0,0,0,.45);max-height:260px;overflow:auto;font-size:13px"; document.body.appendChild(_dd); window.addEventListener("scroll",hideDD,true); } return _dd; }
+function hideDD(){ if(_dd)_dd.style.display="none"; }
+function attachTickerSearch(){
+  document.querySelectorAll('input.cell[data-f="ticker"]').forEach(inp=>{
+    inp.setAttribute("autocomplete","off");
+    inp.addEventListener("input",()=>{ clearTimeout(_ddT); const q=inp.value.trim(); if(!q){hideDD();return;} _ddT=setTimeout(()=>runSearch(inp,q),250); });
+    inp.addEventListener("keydown",e=>{ if(e.key==="Escape")hideDD(); if(e.key==="Enter"){ const f=_dd&&_dd.style.display!=="none"&&_dd.querySelector("[data-sym]"); if(f){e.preventDefault(); f.dispatchEvent(new Event("mousedown"));} } });
+    inp.addEventListener("blur",()=>setTimeout(hideDD,150));
+  });
+}
+async function runSearch(inp,q){
+  let items=[]; try{ const r=await fetch(`${WORKER}/search?q=${encodeURIComponent(q)}`); if(r.ok)items=await r.json(); }catch(e){}
+  const dd=ensureDD();
+  dd.innerHTML = items.length ? items.map(it=>`<div data-sym="${esc(it.symbol)}" data-nm="${esc(it.name)}" style="padding:7px 11px;cursor:pointer;display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid var(--border)"><span><b style="font-family:var(--mono)">${esc(it.symbol)}</b> <span style="color:var(--text-2)">${esc(it.name)}</span></span><span style="color:var(--muted);font-size:11px">${esc(it.exchange)}</span></div>`).join("")
+    : `<div style="padding:8px 11px;color:var(--muted)">No matches for “${esc(q)}”</div>`;
+  const r=inp.getBoundingClientRect();
+  dd.style.left=(r.left+scrollX)+"px"; dd.style.top=(r.bottom+scrollY+3)+"px"; dd.style.minWidth=Math.max(r.width,280)+"px"; dd.style.display="block";
+  dd.querySelectorAll("[data-sym]").forEach(row=>row.addEventListener("mousedown",e=>{ e.preventDefault(); pickTicker(inp,row.dataset.sym,row.dataset.nm); }));
+}
+function pickTicker(inp,sym,name){
+  const tr=inp.closest("tr"); if(!tr)return; const obj=(BOOK[tr.dataset.coll]||[]).find(o=>o.id===tr.dataset.id); if(!obj)return;
+  obj.ticker=sym; obj.name=name||obj.name; obj.country=countryFromTicker(sym); obj.currency=ccyFromTicker(sym);
+  hideDD(); save(); ensurePriced(sym);
 }
 
 /* ---------- price chart modal ---------- */
@@ -452,14 +539,11 @@ function parseHoldingsText(text){
   return out;
 }
 async function handlePdf(file){
-  const key=localStorage.getItem(LS_CLAUDE);
   toast(`<span class="spin"></span> Reading ${esc(file.name)}…`);
   let text="";
   try{ text=await extractPdfText(await file.arrayBuffer()); }
   catch(e){ toast(""); alert("Could not read PDF: "+e.message); return; }
-  let rows;
-  if(key){ try{ rows=await extractWithClaude(text,key); }catch(e){ rows=parseHoldingsText(text); toast(""); } }
-  else rows=parseHoldingsText(text);
+  let rows=parseHoldingsText(text);
   toast("");
   if(!rows||!rows.length){ alert("Couldn't find any holdings in that PDF — try adding rows manually."); return; }
   reviewHoldings(rows,file.name);
@@ -512,39 +596,6 @@ function reviewHoldings(rows,src){
 }
 function toast(html){let t=document.getElementById("toast"); if(!t){t=document.createElement("div");t.id="toast";t.style.cssText="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border-2);padding:9px 16px;border-radius:10px;z-index:80;font-size:13px";document.body.appendChild(t);} if(!html){t.remove();return;} t.innerHTML=html;}
 
-/* ---------- Settings (Claude key + GitHub token) ---------- */
-function openSettings(){
-  const root=document.getElementById("modalRoot");
-  root.innerHTML=`<div class="modal"><div class="box"><span class="x" id="mx">×</span><h3>Settings</h3>
-    <div class="field"><label>Anthropic (Claude) API key — optional, for accurate PDF extraction</label><input id="setKey" type="password" placeholder="sk-ant-…" value="${esc(localStorage.getItem(LS_CLAUDE)||"")}"></div>
-    <div class="field"><label>GitHub token — optional, lets “Publish” commit book.json to ${REPO}</label><input id="setTok" type="password" placeholder="github_pat_…" value="${esc(localStorage.getItem(LS_GH)||"")}"></div>
-    <div class="note">Both are stored only in this browser (localStorage) and sent directly to Anthropic / GitHub. Use a fine-grained GitHub token limited to this repo's <b>Contents: read &amp; write</b>.</div>
-    <div class="addbar"><button class="btn gold" id="setSave">Save</button><button class="btn ghost" id="setClear">Clear both</button></div></div></div>`;
-  root.querySelector("#mx").onclick=()=>root.innerHTML="";
-  root.querySelector("#setSave").onclick=()=>{const k=root.querySelector("#setKey").value.trim(),t=root.querySelector("#setTok").value.trim(); k?localStorage.setItem(LS_CLAUDE,k):localStorage.removeItem(LS_CLAUDE); t?localStorage.setItem(LS_GH,t):localStorage.removeItem(LS_GH); root.innerHTML=""; toast("Saved."); setTimeout(()=>toast(""),1200);};
-  root.querySelector("#setClear").onclick=()=>{localStorage.removeItem(LS_CLAUDE); localStorage.removeItem(LS_GH); root.innerHTML="";};
-}
-
-/* ---------- export / publish / reset ---------- */
-function bookOut(){const o=structuredClone(BOOK); o.updated=new Date().toISOString().slice(0,10); return o;}
-document.getElementById("btnExport").onclick=()=>{const blob=new Blob([JSON.stringify(bookOut(),null,2)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="book.json"; a.click();};
-document.getElementById("btnReset").onclick=()=>{if(confirm("Discard local edits and reload the published book.json?")){localStorage.removeItem(LS_BOOK); BOOK=structuredClone(SEED); selAnalyst=BOOK.analysts[0]?.id||null; render();}};
-document.getElementById("btnSettings").onclick=openSettings;
-document.getElementById("btnPublish").onclick=publish;
-async function publish(){
-  const tok=localStorage.getItem(LS_GH); if(!tok){alert("Add a GitHub token in Settings first."); openSettings(); return;}
-  const path="data/book.json", api=`https://api.github.com/repos/${REPO}/contents/${path}`;
-  toast(`<span class="spin"></span> Publishing…`);
-  try{
-    const cur=await fetch(api,{headers:{authorization:"Bearer "+tok,accept:"application/vnd.github+json"}});
-    const sha=cur.ok?(await cur.json()).sha:undefined;
-    const content=btoa(unescape(encodeURIComponent(JSON.stringify(bookOut(),null,2))));
-    const res=await fetch(api,{method:"PUT",headers:{authorization:"Bearer "+tok,accept:"application/vnd.github+json","content-type":"application/json"},body:JSON.stringify({message:"Update book.json via portal",content,sha})});
-    toast("");
-    if(res.ok) alert("Published ✓ — the site redeploys in ~1 minute.");
-    else alert("Publish failed ("+res.status+"). Check the token scope.");
-  }catch(e){ toast(""); alert("Publish error: "+e.message); }
-}
 function emptyRow(cols,msg){return `<tr><td colspan="${cols}" style="text-align:center;color:var(--muted);padding:22px">${msg||"Nothing here yet."}</td></tr>`;}
 load();
 </script>
