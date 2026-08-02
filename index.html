@@ -499,7 +499,8 @@ function alphaClosedTable(rows){
     <div class="tw"><table><thead>${head}</thead><tbody>${rows.map(alphaClosedRow).join("")}</tbody><tfoot>${foot}</tfoot></table></div>`;
 }
 /* ---------- COVERAGE (own list: dated OW/N/UW stance + return attribution) ---------- */
-const RATING_OPTS=["OW","N","UW"], RATING_FULL={OW:"Overweight",N:"Neutral",UW:"Underweight"};
+const RATING_OPTS=["OW","N","UW"], RATING_FULL={OW:"Overweight",N:"Neutral",UW:"Underweight"}, RATING_PILL={OW:"buy",N:"hold",UW:"sell"};
+function ratingPill(v){return `<span class="pill ${RATING_PILL[v]||"hold"}" title="${RATING_FULL[v]||""}">${esc(v||"N")}</span>`;}
 const RATING_MIGRATE={Buy:"OW",Add:"OW",Overweight:"OW",Hold:"N",Neutral:"N",Reduce:"UW",Sell:"UW",Underweight:"UW"};
 const openCov=new Set();   // coverage ids whose history panel is expanded (persists across re-renders)
 function ratingSelect(v,attr){
@@ -530,7 +531,7 @@ function coverageRow(o){
     <td>${entryCell}</td>
     <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(o.ticker||"")}" placeholder="TICKER.XX"></td>
     <td><input class="cell" data-f="name" style="min-width:150px;text-align:left;font-family:'Manrope'" value="${esc(o.name||"")}" placeholder="(auto)"></td>
-    <td>${ratingSelect(cur,'data-covrate')}</td>
+    <td><div style="display:flex;gap:8px;align-items:center">${ratingPill(cur)}<button class="btn sm" data-covchange="${o.id}" style="padding:2px 9px">Change</button></div></td>
     <td class="num">${entryPx!=null?money(entryPx,ccy):"–"}</td>
     <td class="num">${px!=null?money(px,ccy):"–"}</td>
     <td class="num">${pctSpan(tot.abs)}</td>
@@ -562,7 +563,7 @@ function coverageTable(){
   const rows=(BOOK.coverage||[]).filter(o=>o.analyst===selAnalyst);
   const head=`<tr><th style="text-align:left">Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Rating</th><th class="num">Entry price</th><th class="num">Last price</th><th class="num">Total return</th><th class="num">vs Index</th><th class="num">History</th><th>Comment</th><th></th></tr>`;
   const body=rows.length?rows.map(coverageRow).join(""):emptyRow(11,"No coverage yet — click + Add name.");
-  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. <b>Entry date</b> = start of coverage (your first stance); <b>Entry price</b> = its closing price. <b>Rating</b> = current stance (OW / N / UW). <b>Total return / vs Index</b> = the stock's return since first covered (Entry price → Last price), and vs its market index. Open <b>History</b> (▸) to log dated rating changes and see the return during each stance. Click <b>💬 Comment</b> to record the thesis readers see.</div>
+  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. <b>Entry date</b> = start of coverage (your first stance); <b>Entry price</b> = its closing price. <b>Rating</b> = current stance (OW / N / UW); click <b>Change</b> to record a dated rating change — it's logged in <b>History</b>. <b>Total return / vs Index</b> = the stock's return since first covered (Entry price → Last price), and vs its market index. Open <b>History</b> (▸) to see each stance and its return. Click <b>💬 Comment</b> to record the thesis readers see.</div>
     <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>
     <div class="addbar"><button class="btn sm" data-addcov>+ Add name</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search — name and price fill in automatically. Independent of your timed Alpha calls.</span></div>`;
 }
@@ -627,7 +628,7 @@ function wire(){
   v.querySelectorAll(".seg [data-section]").forEach(b=>b.onclick=()=>{ section=b.dataset.section; syncHash(); render(); });
   v.querySelectorAll("[data-tilescope]").forEach(b=>b.onclick=()=>{ tileScope=b.dataset.tilescope; render(); });
   v.querySelectorAll("input.cell,select.cell").forEach(inp=>inp.addEventListener("change",e=>{
-    if(e.target.matches("[data-covrate],[data-histrate],[data-histdate],[data-entrydate]")) return;  // handled below
+    if(e.target.matches("[data-histrate],[data-histdate],[data-entrydate]")) return;  // handled below
     const tr=e.target.closest("tr"); const coll=tr.dataset.coll, id=tr.dataset.id, f=e.target.dataset.f;
     const obj=(BOOK[coll]||[]).find(o=>o.id===id); if(!obj) return;
     let val=e.target.value;
@@ -643,13 +644,13 @@ function wire(){
   const addCov=v.querySelector("[data-addcov]"); if(addCov) addCov.onclick=addCoverage;
   v.querySelectorAll("[data-note]").forEach(n=>n.onclick=e=>rationaleModal(n.dataset.ncoll,n.dataset.nid));
   // coverage: current-rating select (logs a today-dated stance change) + history expand/edit
-  v.querySelectorAll("[data-covrate]").forEach(s=>s.addEventListener("change",e=>setCovRatingToday(e.target.closest("tr").dataset.id,e.target.value)));
+  v.querySelectorAll("[data-covchange]").forEach(b=>b.onclick=()=>changeRatingModal(b.dataset.covchange));
   v.querySelectorAll("[data-covtoggle]").forEach(t=>t.onclick=e=>{const id=e.target.closest("tr").dataset.id; openCov.has(id)?openCov.delete(id):openCov.add(id); render();});
   v.querySelectorAll("[data-entrydate]").forEach(i=>i.addEventListener("change",e=>editHist(e.target.dataset.histid,"date",e.target.value)));
   v.querySelectorAll("[data-histdate]").forEach(i=>i.addEventListener("change",e=>editHist(e.target.closest("tr").dataset.histid,"date",e.target.value)));
   v.querySelectorAll("[data-histrate]").forEach(s=>s.addEventListener("change",e=>editHist(e.target.closest("tr").dataset.histid,"rating",e.target.value)));
   v.querySelectorAll("[data-histdel]").forEach(d=>d.onclick=e=>delHist(e.target.closest("tr").dataset.histid));
-  v.querySelectorAll("[data-addhist]").forEach(b=>b.onclick=e=>addHist(b.dataset.addhist));
+  v.querySelectorAll("[data-addhist]").forEach(b=>b.onclick=e=>changeRatingModal(b.dataset.addhist));
   v.querySelectorAll("[data-close]").forEach(b=>b.onclick=e=>closeCallModal(e.target.closest("tr").dataset.id));
   attachTickerSearch();
   v.querySelectorAll("[data-chart]").forEach(s=>s.onclick=()=>openChart(s.dataset.chart,s.dataset.nm));
@@ -661,19 +662,34 @@ function addCall(){const id="c-"+Date.now().toString(36); BOOK.calls.push({id,an
 function addCoverage(){const id="cov-"+Date.now().toString(36), today=new Date().toISOString().slice(0,10);
   BOOK.coverage.push({id,analyst:selAnalyst,ticker:"",name:"",rationale:"",history:[{id:"hx-"+Date.now().toString(36),date:today,rating:"N"}]});
   openCov.add(id); save(); render();}
-function setCovRatingToday(covId,val){  // main-row rating select = "my view as of today"
+function changeRatingModal(covId){   // explicit, dated stance change → recorded in history
   const o=(BOOK.coverage||[]).find(x=>x.id===covId); if(!o) return;
-  if(!Array.isArray(o.history)) o.history=[];
-  const today=new Date().toISOString().slice(0,10), h=sortedHistory(o), last=h[h.length-1];
-  if(last&&last.date===today) last.rating=val;                                   // update today's entry
-  else o.history.push({id:"hx-"+Date.now().toString(36),date:today,rating:val}); // else log a change
-  save(); render();
+  const cur=currentRating(o), h=sortedHistory(o), lastDate=h.length?h[h.length-1].date:null;
+  const today=new Date().toISOString().slice(0,10);
+  const root=document.getElementById("modalRoot");
+  root.innerHTML=`<div class="modal"><div class="box"><span class="x" id="mx">×</span>
+    <h3>Change rating — ${esc(o.name||o.ticker||"this name")}</h3>
+    <div class="small">${o.ticker?esc(o.ticker)+" · ":""}Current: ${ratingPill(cur)}${lastDate?" since "+fmtDate(lastDate):""}. Pick the new rating and the date it takes effect — it's recorded in the history.</div>
+    <div class="field"><label>New rating</label><div id="ncPick" style="display:flex;gap:8px">${RATING_OPTS.map(r=>`<button type="button" class="btn ${r===cur?"gold":"ghost"}" data-pick="${r}" title="${RATING_FULL[r]}" style="min-width:56px;font-weight:700">${r}</button>`).join("")}</div><input type="hidden" id="ncRating" value="${cur}"></div>
+    <div class="field"><label>Effective date</label><input id="ncDate" type="date" value="${today}" max="${today}"></div>
+    <div class="addbar"><button class="btn gold" id="ncSave">Save change</button><button class="btn ghost" id="ncCancel">Cancel</button></div>
+  </div></div>`;
+  root.querySelector("#mx").onclick=root.querySelector("#ncCancel").onclick=()=>root.innerHTML="";
+  root.querySelector(".modal").onclick=e=>{if(e.target.classList.contains("modal"))root.innerHTML="";};
+  root.querySelectorAll("#ncPick [data-pick]").forEach(b=>b.onclick=()=>{ root.querySelector("#ncRating").value=b.dataset.pick;
+    root.querySelectorAll("#ncPick [data-pick]").forEach(x=>{x.classList.toggle("gold",x===b);x.classList.toggle("ghost",x!==b);}); });
+  root.querySelector("#ncSave").onclick=()=>{
+    const date=root.querySelector("#ncDate").value||today, rating=root.querySelector("#ncRating").value;
+    if(!date){alert("Pick an effective date.");return;}
+    if(!Array.isArray(o.history)) o.history=[];
+    const existing=o.history.find(x=>x.date===date);          // one stance per date (upsert)
+    if(existing) existing.rating=rating; else o.history.push({id:"hx-"+Date.now().toString(36),date,rating});
+    openCov.add(covId); save(); root.innerHTML=""; render();
+  };
 }
 function findHist(histId){ for(const o of (BOOK.coverage||[])){ const e=(o.history||[]).find(x=>x.id===histId); if(e) return {o,e}; } return null; }
 function editHist(histId,field,val){ const h=findHist(histId); if(!h) return; h.e[field]=val; save(); render(); }
 function delHist(histId){ const h=findHist(histId); if(!h) return; h.o.history=h.o.history.filter(x=>x.id!==histId); save(); render(); }
-function addHist(covId){ const o=(BOOK.coverage||[]).find(x=>x.id===covId); if(!o) return; if(!Array.isArray(o.history))o.history=[];
-  o.history.push({id:"hx-"+Date.now().toString(36),date:new Date().toISOString().slice(0,10),rating:"N"}); openCov.add(covId); save(); render(); }
 function addHolding(){const id="h-"+Date.now().toString(36); BOOK.holdings.push({id,name:"",ticker:"",country:"IN",currency:"INR",entry:null,entryDate:"",source:"",notes:""}); save(); render();}
 function closeCallModal(id){
   const c=(BOOK.calls||[]).find(o=>o.id===id); if(!c) return;
