@@ -508,6 +508,12 @@ function ratingSelect(v,attr){
   const col=v==="OW"?"var(--up)":v==="UW"?"var(--down)":"var(--text-2)";
   return `<select class="cell" style="width:62px;font-weight:700;color:${col}" ${attr||'data-f="rating"'} title="${RATING_FULL[v]||""}">`+RATING_OPTS.map(o=>`<option style="color:var(--text)" ${o===v?"selected":""}>${o}</option>`).join("")+"</select>";
 }
+function covRatingSelect(o){   // main-row dropdown: set/correct the CURRENT call's rating in place
+  const has=(o.history||[]).length>0, cur=has?currentRating(o):"";
+  const col=cur==="OW"?"var(--up)":cur==="UW"?"var(--down)":"var(--text-2)";
+  const opts=(has?"":`<option value="" selected>—</option>`)+RATING_OPTS.map(r=>`<option value="${r}" style="color:var(--text)" ${has&&r===cur?"selected":""}>${r}</option>`).join("");
+  return `<select class="cell" style="width:64px;font-weight:700;color:${col}" data-covrate data-covid="${o.id}" title="${has?"Set/correct your current rating (in place — date & return unchanged)":"Pick a rating to start coverage today (or use Change Call to set a date)"}">${opts}</select>`;
+}
 function sortedHistory(o){ return (o.history||[]).slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")); }
 function currentRating(o){ const h=sortedHistory(o); return h.length?h[h.length-1].rating:"N"; }
 function periodRet(sym,start,end){ if(!sym||!start) return null; const sP=oob(sym,start), eP=end?oob(sym,end):livePrice(sym); return (sP&&eP)?eP/sP-1:null; }
@@ -533,9 +539,7 @@ function coverageRow(o){
   const entryPxCell=now
     ? (entryPx!=null?money(entryPx,ccy):entryHint({ticker:o.ticker,entryDate:now.date,name:o.name}))
     : (o.ticker&&!priced?entryHint({ticker:o.ticker,name:o.name}):"–");
-  const ratingCell=hasStance
-    ? `<div style="display:flex;gap:8px;align-items:center">${ratingPill(cur)}<button class="btn sm" data-covchange="${o.id}" style="padding:2px 9px">Change</button></div>`
-    : `<button class="btn sm" data-covchange="${o.id}" style="padding:2px 9px" title="Record your first call (rating + date)">Set call</button>`;
+  const changeCallCell=`<button class="btn sm" data-covchange="${o.id}" style="padding:2px 9px" title="${hasStance?"Record a stance change on a chosen date (kept in History)":"Record your first call with a date"}">${hasStance?"Change":"Set"}</button>`;
   const histCell=hasStance
     ? `<span data-covtoggle style="cursor:pointer;user-select:none;color:var(--text-2)" title="Call history">${open?"▾":"▸"} ${n}</span>`
     : `<span class="flat">–</span>`;
@@ -543,7 +547,8 @@ function coverageRow(o){
     <td>${entryCell}</td>
     <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(o.ticker||"")}" placeholder="TICKER.XX"></td>
     <td><input class="cell" data-f="name" style="min-width:150px;text-align:left;font-family:'Manrope'" value="${esc(o.name||"")}" placeholder="(auto)"></td>
-    <td>${ratingCell}</td>
+    <td>${covRatingSelect(o)}</td>
+    <td>${changeCallCell}</td>
     <td class="num">${entryPxCell}</td>
     <td class="num">${px!=null?money(px,ccy):"–"}</td>
     <td class="num">${pctSpan(now?now.abs:null)}</td>
@@ -564,7 +569,7 @@ function coverageDetail(o){
       <td><span class="del" data-histdel>✕</span></td></tr>`).join("")
     : `<tr><td colspan="6" style="color:var(--muted);padding:10px">No calls yet — use the <b>Set call</b> button on the row.</td></tr>`;
   const foot=`<tr class="subtotal"><td colspan="3">Total since first covered${tot.from?" · from "+fmtDate(tot.from):""}</td><td class="num">${pctSpan(tot.abs)}</td><td class="num">${pctSpan(tot.rel)}</td><td></td></tr>`;
-  return `<tr class="cov-detail"><td colspan="11" style="background:var(--surface-2);padding:10px 14px 12px">
+  return `<tr class="cov-detail"><td colspan="12" style="background:var(--surface-2);padding:10px 14px 12px">
     <div class="small" style="color:var(--text-2);margin-bottom:6px"><b>Rating history — ${esc(o.name||o.ticker||"")}</b> · the stock's return during each stance, absolute and vs ${esc(benchNm)}.</div>
     <table style="width:auto;min-width:520px"><thead><tr><th style="text-align:left">Date of call</th><th style="text-align:left">Rating</th><th style="text-align:left">Period</th><th class="num">Return</th><th class="num">vs Index</th><th></th></tr></thead>
       <tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>
@@ -573,9 +578,9 @@ function coverageDetail(o){
 }
 function coverageTable(){
   const rows=(BOOK.coverage||[]).filter(o=>o.analyst===selAnalyst);
-  const head=`<tr><th style="text-align:left">Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Rating</th><th class="num">Entry price</th><th class="num">Last price</th><th class="num">Return</th><th class="num">vs Index</th><th class="num">History</th><th>Comment</th><th></th></tr>`;
-  const body=rows.length?rows.map(coverageRow).join(""):emptyRow(11,"No coverage yet — click + Add name.");
-  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. Type a <b>Ticker</b> (pick the exact listing), then <b>Set call</b> to record your rating and the <b>date you made the call</b>. <b>Entry date</b> = the date of your <b>current (latest) call</b> — it moves when you <b>Change</b> your call; <b>Entry price</b> = the price then. <b>Return / vs Index</b> = the stock's move since your current call (Entry price → Last price), and vs its market index. Open <b>History</b> (▸) for each call and the <b>lifetime</b> total since your first call. Click <b>💬 Comment</b> to record the thesis readers see.</div>
+  const head=`<tr><th style="text-align:left">Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Rating</th><th>Change Call</th><th class="num">Entry price</th><th class="num">Last price</th><th class="num">Return</th><th class="num">vs Index</th><th class="num">History</th><th>Comment</th><th></th></tr>`;
+  const body=rows.length?rows.map(coverageRow).join(""):emptyRow(12,"No coverage yet — click + Add name.");
+  return `<div class="desc">The names ${esc(analystName(selAnalyst))} covers — keyed in independently of Alpha. Type a <b>Ticker</b> (pick the exact listing). <b>Rating</b> = a dropdown to set/correct your <b>current</b> call in place (date &amp; return unchanged). <b>Change Call</b> = record a stance change on a chosen <b>date</b> (kept in History; that date becomes the new Entry). <b>Entry date</b> = the date of your <b>current (latest) call</b>; <b>Entry price</b> = the price then; <b>Return / vs Index</b> = the stock's move since your current call (Entry price → Last price), and vs its market index. Open <b>History</b> (▸) for each call and the <b>lifetime</b> total. Click <b>💬 Comment</b> to record the thesis readers see.</div>
     <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>
     <div class="addbar"><button class="btn sm" data-addcov>+ Add name</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search — name and price fill in automatically. Independent of your timed Alpha calls.</span></div>`;
 }
@@ -640,7 +645,7 @@ function wire(){
   v.querySelectorAll(".seg [data-section]").forEach(b=>b.onclick=()=>{ section=b.dataset.section; syncHash(); render(); });
   v.querySelectorAll("[data-tilescope]").forEach(b=>b.onclick=()=>{ tileScope=b.dataset.tilescope; render(); });
   v.querySelectorAll("input.cell,select.cell").forEach(inp=>inp.addEventListener("change",e=>{
-    if(e.target.matches("[data-histrate],[data-histdate],[data-entrydate]")) return;  // handled below
+    if(e.target.matches("[data-histrate],[data-histdate],[data-entrydate],[data-covrate]")) return;  // handled below
     const tr=e.target.closest("tr"); const coll=tr.dataset.coll, id=tr.dataset.id, f=e.target.dataset.f;
     const obj=(BOOK[coll]||[]).find(o=>o.id===id); if(!obj) return;
     let val=e.target.value;
@@ -655,7 +660,8 @@ function wire(){
   const addH=v.querySelector("[data-addhold]"); if(addH) addH.onclick=addHolding;
   const addCov=v.querySelector("[data-addcov]"); if(addCov) addCov.onclick=addCoverage;
   v.querySelectorAll("[data-note]").forEach(n=>n.onclick=e=>rationaleModal(n.dataset.ncoll,n.dataset.nid));
-  // coverage: current-rating select (logs a today-dated stance change) + history expand/edit
+  // coverage: Rating dropdown (fix current call in place) · Change Call button (dated) · history expand/edit
+  v.querySelectorAll("[data-covrate]").forEach(s=>s.addEventListener("change",e=>setCovRating(e.target.dataset.covid,e.target.value)));
   v.querySelectorAll("[data-covchange]").forEach(b=>b.onclick=()=>changeRatingModal(b.dataset.covchange));
   v.querySelectorAll("[data-covtoggle]").forEach(t=>t.onclick=e=>{const id=e.target.closest("tr").dataset.id; openCov.has(id)?openCov.delete(id):openCov.add(id); render();});
   v.querySelectorAll("[data-entrydate]").forEach(i=>i.addEventListener("change",e=>editHist(e.target.dataset.histid,"date",e.target.value)));
@@ -673,6 +679,15 @@ function addCall(){const id="c-"+Date.now().toString(36); BOOK.calls.push({id,an
 function addCoverage(){const id="cov-"+Date.now().toString(36);
   BOOK.coverage.push({id,analyst:selAnalyst,ticker:"",name:"",rationale:"",history:[]});  // no filler stance; first call sets the entry
   save(); render();}
+function setCovRating(covId,val){   // Rating dropdown: fix the current call in place (or start coverage today)
+  if(!val) return;
+  const o=(BOOK.coverage||[]).find(x=>x.id===covId); if(!o) return;
+  if(!Array.isArray(o.history)) o.history=[];
+  const h=sortedHistory(o);
+  if(h.length) h[h.length-1].rating=val;   // edit the latest stance in place (same date → entry/return unchanged)
+  else o.history.push({id:"hx-"+Date.now().toString(36),date:new Date().toISOString().slice(0,10),rating:val});  // first call → today
+  save(); render();
+}
 function changeRatingModal(covId){   // explicit, dated call → recorded in history (first call sets the entry)
   const o=(BOOK.coverage||[]).find(x=>x.id===covId); if(!o) return;
   const h=sortedHistory(o), hasStance=h.length>0, cur=currentRating(o), lastDate=hasStance?h[h.length-1].date:null;
