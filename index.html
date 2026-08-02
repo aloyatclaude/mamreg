@@ -325,7 +325,7 @@ function scoreCall(c){
   const eP=oob(tk,c.entryDate);
   const xP=c.exitDate?oob(tk,c.exitDate):livePrice(tk);
   const be=oob(b,c.entryDate);
-  const bx=c.exitDate?oob(b,c.exitDate):lastClose(b);
+  const bx=c.exitDate?oob(b,c.exitDate):livePrice(b);   // use the live index level, not the (sometimes stale) last daily close
   let stockRet=null,benchRet=null,alpha=null,result="-";
   if(eP&&xP) stockRet=xP/eP-1;
   if(be&&bx) benchRet=bx/be-1;
