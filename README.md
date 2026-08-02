@@ -9,7 +9,7 @@ auto-save to the cloud. Prices are indicative (delayed ~15 min via the Worker's 
 
 ## Two tabs
 
-- **Analysts** — one sub-tab per analyst (**Mark · Ang · Aloy**, add more with ＋). Each analyst
+- **Analysts** — one sub-tab per analyst (**Mark · Ziv · Aloy**, add more with ＋). Each analyst
   shows a **summary that switches scope** — a toggle **Auto · Alpha · Coverage · Total** picks whether
   the tiles reflect the timed Alpha calls, the Coverage list, or both combined (**Auto** follows the
   sub-tab you're on). Hit rate shows in **Alpha** scope only. Then:

@@ -200,6 +200,8 @@ async function load(){
   { const _td=new Date().toISOString().slice(0,10);
     BOOK.coverage.forEach(o=>{ if((!Array.isArray(o.history)||!o.history.length)&&o.rating){ o.history=[{id:"hx-"+Math.random().toString(36).slice(2,8),date:_td,rating:RATING_MIGRATE[o.rating]||"N"}]; } if(!Array.isArray(o.history))o.history=[]; delete o.rating; }); }
   lastSynced=structuredClone(BOOK);
+  // one-off: rename the placeholder analyst "Ang" → "Ziv" (persists via merge since it differs from lastSynced)
+  if((BOOK.analysts||[]).some(a=>a.name==="Ang")){ BOOK.analysts.forEach(a=>{ if(a.name==="Ang") a.name="Ziv"; }); save(); }
   loadCachedPrices();
   parseHash();
   if(!selAnalyst&&BOOK.analysts[0]) selAnalyst=BOOK.analysts[0].id;

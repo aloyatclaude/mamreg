@@ -3,7 +3,7 @@
   "_note": "Canonical book. Edit here (or in-browser, then Export/Publish) and commit to redeploy. Analysts Mark/Ang/Aloy hold the seed calls (transcribed from the reference screenshots — demo India data plus two sample TW/HK holdings). Holdings.country is the display bucket; benchmark & currency are resolved from the Yahoo ticker suffix. Replace with your real calls/holdings.",
   "analysts": [
     { "id": "mark", "name": "Mark", "note": "" },
-    { "id": "ang", "name": "Ang", "note": "" },
+    { "id": "ang", "name": "Ziv", "note": "" },
     { "id": "aloy", "name": "Aloy", "note": "" }
   ],
   "holdings": [
