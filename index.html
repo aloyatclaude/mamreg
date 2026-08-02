@@ -407,6 +407,13 @@ function idxCell(s){
   const tag=(s.benchRet!=null&&s.benchmark)?` <span class="tag">${esc(BENCH_NAME[s.benchmark]||"")}</span>`:"";
   return `<td class="num">${pctSpan(s.benchRet)}${tag}</td>`;
 }
+function fmtDate(iso){ const p=(iso||"").split("-"); if(p.length<3) return iso||""; return `${+p[2]} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+p[1]-1]} ${p[0].slice(2)}`; }
+function entryHint(o){   // shown in the Entry cost cell when there's no entry price
+  const ks=SORTED[o.ticker];
+  if(ks&&ks.length)  // ticker is valid & priced, but the entry date is before its first trading day (e.g. a recent IPO)
+    return `<span style="font-size:11px;color:var(--accent)" title="No price on ${esc(o.entryDate||"that date")} — ${esc(o.name||o.ticker)} started trading ${ks[0]}. Set the entry date on/after that.">⚠ from ${fmtDate(ks[0])}</span>`;
+  return `<span style="font-size:11px;color:var(--accent)" title="Type in the Ticker box and pick the exact listing (with its exchange) from the dropdown">⚠ pick</span>`;
+}
 function aggr(rows){
   const scored=rows.filter(x=>x.s.result==="HIT"||x.s.result==="MISS"), hits=scored.filter(x=>x.s.result==="HIT").length;
   const mean=a=>a.length?a.reduce((p,q)=>p+q,0)/a.length:null;
@@ -420,7 +427,7 @@ function alphaOpenRow(x){
     <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(c.ticker||"")}" placeholder="TICKER.XX"></td>
     <td><input class="cell" data-f="name" style="min-width:140px;text-align:left;font-family:'Manrope'" value="${esc(c.name||"")}" placeholder="(auto)"></td>
     <td>${callSelect(c.call)}</td>
-    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?`<span style="font-size:11px;color:var(--accent)" title="Type in the Ticker box and pick the exact listing (with its exchange) from the dropdown">⚠ pick</span>`:"–")}</td>
+    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?entryHint(c):"–")}</td>
     <td class="num">${pctSpan(s.stockRet)}</td>
     ${idxCell(s)}
     <td class="num">${pctSpan(s.alpha)}</td>
@@ -434,7 +441,7 @@ function alphaClosedRow(x){
     <td><input class="cell" data-f="ticker" style="width:118px;text-align:left;font-family:var(--mono)" value="${esc(c.ticker||"")}"></td>
     <td><input class="cell" data-f="name" style="min-width:140px;text-align:left;font-family:'Manrope'" value="${esc(c.name||"")}"></td>
     <td>${callSelect(c.call)}</td>
-    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?`<span style="font-size:11px;color:var(--accent)" title="Type in the Ticker box and pick the exact listing (with its exchange) from the dropdown">⚠ pick</span>`:"–")}</td>
+    <td class="num">${s.entryPx!=null?money(s.entryPx,ccy):(c.ticker?entryHint(c):"–")}</td>
     <td><input class="cell w-dt" data-f="exitDate" type="date" value="${esc(c.exitDate||"")}"></td>
     <td class="num">${s.exitPx!=null?money(s.exitPx,ccy):"–"}</td>
     <td class="num">${pctSpan(s.stockRet)}</td>
