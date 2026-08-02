@@ -43,6 +43,16 @@ track record. `prices.json` is disposable and rebuilt every deploy (never commit
    straight to the repo via the GitHub API → the deploy Action redeploys. (Token is stored only in
    your browser; use a fine-grained token limited to this repo's *Contents: read & write*.)
 
+### How to add a stock
+
+- **A call:** Analysts → pick the analyst → **Alpha** tab → **＋ Add call** → type Company,
+  Ticker (with suffix), pick Buy/Sell/Hold, set the Entry date. Leave Exit blank = open; set an
+  Exit date to move it to **Historical Trades**. Return / vs-Index / hit rate compute automatically.
+- **A holding:** **Holdings** → **＋ Add holding** → Company, Ticker, Cost. Country + benchmark are
+  inferred from the ticker suffix; the row drops into the right country group.
+- **Prices for a new ticker** appear only after you **Publish** (or Export + commit) — the fetcher
+  reads tickers from the committed `book.json`, so until then the price shows "–".
+
 ### Ticker & benchmark conventions
 
 Ticker = the **Yahoo symbol** (with exchange suffix). Benchmark, currency and country are resolved

@@ -296,7 +296,7 @@ function callsTable(rows,openMode){
   const desc=`<div class="desc">${openMode?"Open calls, marked-to-market.":"Closed calls, realized."} Return = stock; vs Index = ${esc(bench)} over the same dates; +/− = alpha. Hit/miss on alpha (Hold excluded).</div>`;
   const body=rows.length?rows.map(x=>callRow(x,openMode)).join(""):emptyRow(11,openMode?"No open calls.":"No closed trades yet.");
   return desc+`<div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody>${foot?`<tfoot>${foot}</tfoot>`:""}</table></div>`+
-    (openMode?`<div class="addbar"><button class="btn sm" data-addcall>+ Add call</button><span class="small">New call is attributed to ${esc(analystName(selAnalyst))}. Set an exit date to move it to Historical Trades.</span></div>`:"");
+    (openMode?`<div class="addbar"><button class="btn sm" data-addcall>+ Add call</button><span class="small">New call is attributed to ${esc(analystName(selAnalyst))}. Set an exit date to move it to Historical Trades. Ticker = Yahoo symbol with exchange suffix (2330.TW · 0700.HK · RELIANCE.NS · 005930.KS · AAPL).</span></div>`:"");
 }
 function coverageTable(sum){
   const byTk={};
@@ -317,8 +317,7 @@ function coverageTable(sum){
     <tbody>${rows||emptyRow(6,"No coverage yet.")}</tbody></table></div>`;
 }
 function stockCell(o){
-  return `<td><input class="cell w-name" data-f="name" value="${esc(o.name||"")}" placeholder="Company">
-    <div style="display:flex;gap:5px;align-items:center;margin-top:3px"><input class="cell w-tk" data-f="ticker" value="${esc(o.ticker||"")}" placeholder="TICKER.XX">${o.ticker?`<span class="link" data-chart="${esc(o.ticker)}" data-nm="${esc(o.name)}" title="price chart">📈</span>`:""}</div></td>`;
+  return `<td><div style="display:flex;gap:6px;align-items:center"><input class="cell" data-f="name" style="flex:1;min-width:118px" value="${esc(o.name||"")}" placeholder="Company"><input class="cell" data-f="ticker" style="flex:0 0 120px;text-align:left;font-family:var(--mono)" value="${esc(o.ticker||"")}" placeholder="TICKER.XX">${o.ticker?`<span class="link" data-chart="${esc(o.ticker)}" data-nm="${esc(o.name)}" title="price chart">📈</span>`:""}</div></td>`;
 }
 function resultBadge(r,open){ if(r==="HIT")return `<span class="badge hit">HIT${open?"*":""}</span>`; if(r==="MISS")return `<span class="badge miss">MISS${open?"*":""}</span>`; if(r==="hold")return '<span class="badge na">HOLD</span>'; return '<span class="badge na">–</span>'; }
 function callSelect(v){return `<select class="cell w-xs" data-f="call">`+["Buy","Sell","Hold"].map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")+"</select>";}
@@ -346,7 +345,7 @@ function renderHoldings(){
   return `<div class="panel"><h2>Holdings</h2><div class="desc">Grouped by country. Cost = your entry price. LTP, 1D/1W/1M/YTD from the price feed. Return = LTP ÷ cost − 1.</div>
     <div style="margin-bottom:12px">${pills}</div>
     <div class="tw"><table><thead>${head}</thead><tbody>${groups}</tbody></table></div>
-    <div class="addbar"><button class="btn sm" data-addhold>+ Add holding</button><button class="btn sm gold" id="btnPdf">⬆ Upload statement (PDF)</button><input type="file" id="pdfInput" accept="application/pdf" class="hidden"><span class="small">PDF is read in your browser; you review before anything is added.</span></div></div>`;
+    <div class="addbar"><button class="btn sm" data-addhold>+ Add holding</button><button class="btn sm gold" id="btnPdf">⬆ Upload statement (PDF)</button><input type="file" id="pdfInput" accept="application/pdf" class="hidden"><span class="small">Ticker = Yahoo symbol with exchange suffix (2330.TW · 0700.HK · RELIANCE.NS · 005930.KS · AAPL). PDF is read in your browser; you review before anything is added.</span></div></div>`;
 }
 
 /* ---------- editing / events ---------- */
