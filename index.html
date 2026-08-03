@@ -139,7 +139,68 @@ const SUFFIX_COUNTRY={".HK":"HK",".SS":"CN",".SZ":"CN",".NS":"IN",".BO":"IN",".T
 const SUFFIX_CCY={".HK":"HKD",".SS":"CNY",".SZ":"CNY",".NS":"INR",".BO":"INR",".TW":"TWD",".TWO":"TWD",".KS":"KRW",".KQ":"KRW",".SI":"SGD",".KL":"MYR",".BK":"THB",".JK":"IDR",".PS":"PHP",".T":"JPY",".L":"GBP",".AX":"AUD",".TO":"CAD",".DE":"EUR",".PA":"EUR"};
 const BENCH_NAME={"^HSI":"Hang Seng","000300.SS":"CSI 300","^CRSLDX":"Nifty 500","^BSESN":"Sensex","^TWII":"TAIEX","^KS11":"KOSPI","^STI":"STI","^KLSE":"KLCI","^SET.BK":"SET","^JKSE":"JKSE","PSEI.PS":"PSEi","^N225":"Nikkei","^GSPC":"S&P 500","^FTSE":"FTSE 100","^AXJO":"ASX 200","^GSPTSE":"TSX","^GDAXI":"DAX","^FCHI":"CAC 40"};
 const CUR_SYM={INR:"₹",TWD:"NT$",KRW:"₩",USD:"$",HKD:"HK$",JPY:"¥",CNY:"¥",SGD:"S$",MYR:"RM",THB:"฿",IDR:"Rp",PHP:"₱",GBP:"£",EUR:"€",AUD:"A$",CAD:"C$"};
-const COUNTRIES=[["HK","Hong Kong"],["CN","China"],["IN","India"],["TW","Taiwan"],["KR","Korea"],["ASEAN","ASEAN"]];
+const COUNTRIES=[["HK","Hong Kong"],["CN","China"],["IN","India"],["TW","Taiwan"],["KR","Korea"],["ASEAN","ASEAN"],["AU","Australia"]];
+// Holdings = the MAEI · Maybank Asiapac ex-Japan Equity-I fund (31/07/2026). {name,ticker[,country]} —
+// country/currency & 1D/1W/1M/YTD all derive from the ticker; `country` is only for the pending-ticker rows.
+const FUND_HOLDINGS=[
+  {name:"Alibaba Group Holding",ticker:"9988.HK"},
+  {name:"CATL (Contemporary Amperex) H",ticker:"3750.HK"},
+  {name:"PetroChina",ticker:"0857.HK"},
+  {name:"WuXi AppTec",ticker:"2359.HK"},
+  {name:"Precision Tsugami China",ticker:"1651.HK"},
+  {name:"Sany Heavy Equipment Intl",ticker:"0631.HK"},
+  {name:"Weichai Power",ticker:"2338.HK"},
+  {name:"China Hongqiao Group",ticker:"1378.HK"},
+  {name:"CMOC Group",ticker:"3993.HK"},
+  {name:"Zijin Gold International",ticker:"2259.HK"},
+  {name:"Eastroc Beverage (H)",ticker:"",country:"HK"},
+  {name:"Chaozhou Three-Circle (H)",ticker:"",country:"HK"},
+  {name:"CATL (Contemporary Amperex) A",ticker:"300750.SZ"},
+  {name:"Advanced Micro-Fabrication",ticker:"688012.SS"},
+  {name:"Naura Technology Group",ticker:"002371.SZ"},
+  {name:"Zhongji Innolight",ticker:"300308.SZ"},
+  {name:"Bharti Airtel",ticker:"BHARTIARTL.NS"},
+  {name:"TVS Motor",ticker:"TVSMOTOR.NS"},
+  {name:"Reliance Industries",ticker:"RELIANCE.NS"},
+  {name:"Apollo Hospitals",ticker:"APOLLOHOSP.NS"},
+  {name:"Emcure Pharmaceuticals",ticker:"EMCURE.NS"},
+  {name:"Sai Life Sciences",ticker:"SAILIFE.NS"},
+  {name:"Sun Pharmaceutical",ticker:"SUNPHARMA.NS"},
+  {name:"Torrent Pharmaceuticals",ticker:"TORNTPHARM.NS"},
+  {name:"Adani Ports & SEZ",ticker:"ADANIPORTS.NS"},
+  {name:"GE Vernova T&D India",ticker:"GVT&D.NS"},
+  {name:"KEI Industries",ticker:"KEI.NS"},
+  {name:"Syrma SGS Technology",ticker:"SYRMA.NS"},
+  {name:"Hyosung Heavy Industries",ticker:"298040.KS"},
+  {name:"Amorepacific",ticker:"090430.KS"},
+  {name:"APR Corp",ticker:"278470.KS"},
+  {name:"Samyang Foods",ticker:"003230.KS"},
+  {name:"HD Korea Shipbuilding & Offshore",ticker:"009540.KS"},
+  {name:"Samsung C&T",ticker:"028260.KS"},
+  {name:"Samsung Heavy Industries",ticker:"010140.KS"},
+  {name:"Samsung Electro-Mechanics",ticker:"009150.KS"},
+  {name:"Samsung Electronics",ticker:"005930.KS"},
+  {name:"Samsung Electronics (Pref)",ticker:"005935.KS"},
+  {name:"SK Hynix",ticker:"000660.KS"},
+  {name:"Elite Material",ticker:"2383.TW"},
+  {name:"King Yuan Electronics",ticker:"2449.TW"},
+  {name:"TSMC",ticker:"2330.TW"},
+  {name:"E Ink Holdings",ticker:"8069.TWO"},
+  {name:"Accton Technology",ticker:"2345.TW"},
+  {name:"ASE Technology Holding",ticker:"3711.TW"},
+  {name:"Bizlink Holding",ticker:"3665.TW"},
+  {name:"Delta Electronics",ticker:"2308.TW"},
+  {name:"Gold Circuit Electronics",ticker:"2368.TW"},
+  {name:"MediaTek",ticker:"2454.TW"},
+  {name:"Wiwynn",ticker:"6669.TW"},
+  {name:"Singapore Telecommunications",ticker:"Z74.SI"},
+  {name:"Yangzijiang Shipbuilding",ticker:"BS6.SI"},
+  {name:"Soilbuild Construction Group",ticker:"",country:"ASEAN"},
+  {name:"Cahaya Aero Services",ticker:"",country:"ASEAN"},
+  {name:"BHP Group",ticker:"BHP.AX"},
+  {name:"Rio Tinto",ticker:"RIO.AX"},
+];
+const holdCountry=t=>t.ticker?countryFromTicker(t.ticker):(t.country||"US");
 const WORKER=(location.hostname==="localhost"||location.hostname==="127.0.0.1")?"http://127.0.0.1:8787":"https://mamreg-api.mamreg.workers.dev";
 const LS_BOOK="grp-book-v3", LS_TOKEN="grp-write-token", LS_PRICES="grp-prices-v1";
 const TABS=[["analysts","Analysts"],["holdings","Holdings"]];
@@ -230,7 +291,7 @@ async function load(){
   const lb=document.getElementById("lockBtn"); if(lb) lb.onclick=e=>{e.preventDefault(); if(_poll)clearInterval(_poll); localStorage.removeItem(LS_TOKEN); showGate("Locked. Enter the password to continue.");};
   await priceAll(); render();
   // auto-resolve any already-saved rows whose ticker can't be priced (e.g. bare codes typed earlier)
-  for(const t of [...new Set([...BOOK.calls,...BOOK.holdings,...BOOK.coverage].map(o=>o.ticker).filter(t=>t&&!PRICES.closes[t]))]) await ensurePriced(t);
+  for(const t of [...new Set([...BOOK.calls,...BOOK.holdings,...BOOK.coverage,...FUND_HOLDINGS].map(o=>o.ticker).filter(t=>t&&!PRICES.closes[t]))]) await ensurePriced(t);
   startPolling();
   if(qs.has("pdftest")) setTimeout(()=>reviewHoldings(parseHoldingsText(SAMPLE_STMT),"self-test sample"),300);
   if(qs.get("ddtest")) setTimeout(async()=>{ addCall(); const inp=document.querySelector('input.cell[data-f="ticker"]'); if(inp){ inp.focus(); inp.value=qs.get("ddtest"); await runSearch(inp,qs.get("ddtest")); } },500);
@@ -310,7 +371,7 @@ async function fetchChart(sym){
   }catch(e){}
 }
 function neededSymbols(){ const s=new Set();
-  [...(BOOK.holdings||[]),...(BOOK.calls||[]),...(BOOK.coverage||[])].forEach(o=>{ if(o.ticker){ s.add(o.ticker); s.add(benchFromTicker(o.ticker)); } });
+  [...(BOOK.holdings||[]),...(BOOK.calls||[]),...(BOOK.coverage||[]),...FUND_HOLDINGS].forEach(o=>{ if(o.ticker){ s.add(o.ticker); s.add(benchFromTicker(o.ticker)); } });
   return [...s].filter(x=>x&&!PRICES.closes[x]); }
 async function priceAll(){ const list=neededSymbols(); const C=6;
   for(let i=0;i<list.length;i+=C){ await Promise.all(list.slice(i,i+C).map(fetchChart)); } cachePrices(); }
@@ -418,7 +479,7 @@ function parseHash(){
 }
 function syncHash(){ let h="#"+view; if(view==="analysts") h+="/"+(selAnalyst||"")+"/"+section; try{history.replaceState(null,"",h);}catch(e){} }
 window.addEventListener("hashchange",()=>{const before=view+selAnalyst+section; parseHash(); if(view+selAnalyst+section!==before){buildNav();render();}});
-const SUB={analysts:"Record & grade calls by analyst — return, vs-benchmark and hit rate",holdings:"Positions by country — cost and day/week/month/YTD returns"};
+const SUB={analysts:"Record & grade calls by analyst — return, vs-benchmark and hit rate",holdings:"MAEI · Maybank Asiapac ex-Japan — fund stocks by country, live 1D/1W/1M/YTD"};
 function render(){
   document.getElementById("viewTitle").textContent=TABS.find(t=>t[0]===view)[1];
   document.getElementById("viewSub").textContent=SUB[view]||"";
@@ -692,28 +753,24 @@ function callSelect(v){return `<select class="cell w-xs" data-f="call">`+["Buy",
 
 /* ---------- HOLDINGS (by country) ---------- */
 function renderHoldings(){
-  const H=BOOK.holdings||[];
-  const present=COUNTRIES.filter(([code])=>H.some(h=>(h.country||countryFromTicker(h.ticker))===code));
-  const pills=COUNTRIES.map(([code,label])=>{const n=H.filter(h=>(h.country||countryFromTicker(h.ticker))===code).length; return `<span class="tag" style="${n?"color:var(--text-2)":""}">${label}${n?" · "+n:""}</span>`;}).join(" ");
-  const head=`<tr><th>Stock</th><th class="num">Cost</th><th class="num">LTP</th><th class="num">1D</th><th class="num">1W</th><th class="num">1M</th><th class="num">YTD</th><th class="num">Return</th><th></th></tr>`;
-  const rowHtml=h=>{const ccy=h.currency||ccyFromTicker(h.ticker), px=livePrice(h.ticker), q=quote(h.ticker)||{}; const ret=(px!=null&&h.entry)?px/h.entry-1:null;
-    return `<tr data-id="${h.id}" data-coll="holdings">
-      ${stockCell(h)}
-      <td><input class="cell w-sm" data-f="entry" type="number" value="${h.entry??""}"></td>
-      <td class="num">${money(px,ccy)}</td>
-      <td class="num">${pctSpanRaw(q.d1)}</td><td class="num">${pctSpanRaw(q.w1)}</td><td class="num">${pctSpanRaw(q.m1)}</td><td class="num">${pctSpanRaw(q.ytd)}</td>
-      <td class="num">${ret==null?"–":pctSpan(ret)}</td>
-      <td><span class="del" data-del>✕</span></td></tr>`;};
+  const H=FUND_HOLDINGS;
+  const present=COUNTRIES.filter(([code])=>H.some(h=>holdCountry(h)===code));
+  const pills=COUNTRIES.map(([code,label])=>{const n=H.filter(h=>holdCountry(h)===code).length; return `<span class="tag" style="${n?"color:var(--text-2)":""}">${label}${n?" · "+n:""}</span>`;}).join(" ");
+  const head=`<tr><th style="text-align:left">Stock</th><th class="num">Last price</th><th class="num">1D</th><th class="num">1W</th><th class="num">1M</th><th class="num">YTD</th></tr>`;
+  const rowHtml=h=>{const ccy=ccyFromTicker(h.ticker), px=h.ticker?livePrice(h.ticker):null, q=(h.ticker&&quote(h.ticker))||{};
+    const tk=h.ticker?`<span class="tk">${esc(h.ticker)}</span>`:`<span class="tk" style="color:var(--accent)" title="Ticker pending — send me the Yahoo symbol">ticker pending</span>`;
+    return `<tr>
+      <td style="text-align:left"><span style="font-family:'Manrope'">${esc(h.name)}</span> ${tk}</td>
+      <td class="num">${px!=null?money(px,ccy):"–"}</td>
+      <td class="num">${pctSpanRaw(q.d1)}</td><td class="num">${pctSpanRaw(q.w1)}</td><td class="num">${pctSpanRaw(q.m1)}</td><td class="num">${pctSpanRaw(q.ytd)}</td></tr>`;};
   let groups="";
   for(const [code,label] of present){
-    const rows=H.filter(h=>(h.country||countryFromTicker(h.ticker))===code);
-    groups+=`<tr class="grp-head"><td colspan="9">${label} <span class="cnt">· ${rows.length}</span></td></tr>`+rows.map(rowHtml).join("");
+    const rows=H.filter(h=>holdCountry(h)===code);
+    groups+=`<tr class="grp-head"><td colspan="6">${label} <span class="cnt">· ${rows.length}</span></td></tr>`+rows.map(rowHtml).join("");
   }
-  if(!H.length) groups=emptyRow(9,"No holdings yet — add one or upload a statement PDF.");
-  return `<div class="panel"><h2>Holdings</h2><div class="desc">Grouped by country. Cost = your entry price. LTP, 1D/1W/1M/YTD from the price feed. Return = LTP ÷ cost − 1.</div>
+  return `<div class="panel"><h2>Holdings</h2><div class="desc"><b>MAEI · Maybank Asiapac ex-Japan Equity-I</b> — the fund's stocks, grouped by country. <b>1D / 1W / 1M / YTD</b> are live share-price returns from the price feed (indicative, ~15-min delayed).</div>
     <div style="margin-bottom:12px">${pills}</div>
-    <div class="tw"><table><thead>${head}</thead><tbody>${groups}</tbody></table></div>
-    <div class="addbar"><button class="btn sm" data-addhold>+ Add holding</button><button class="btn sm gold" id="btnPdf">⬆ Upload statement (PDF)</button><input type="file" id="pdfInput" accept="application/pdf" class="hidden"><span class="small">Type in the <b>Ticker</b> box to search. Or upload a statement PDF — read in your browser; you review before anything is added.</span></div></div>`;
+    <div class="tw"><table><thead>${head}</thead><tbody>${groups}</tbody></table></div></div>`;
 }
 
 /* ---------- editing / events ---------- */
