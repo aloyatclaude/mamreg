@@ -573,7 +573,7 @@ const CALL_OPTS=["Buy","Sell","Hold"], CALL_FULL={Buy:"Buy",Sell:"Sell",Hold:"Ho
 function callPill(v){return `<span class="pill ${CALL_PILL[v]||"hold"}" title="${CALL_FULL[v]||""}">${esc(v||"Hold")}</span>`;}
 function starEl(o){const on=!!o.highConviction; return `<span class="star${on?" on":""}" data-star="${o.id}" title="${on?"High-conviction call — click to unmark":"Mark as a high-conviction call"}">${on?"★":"☆"}</span>`;}
 function currentCall(o){ const h=activeSorted(o); return h.length?h[h.length-1].call:"Hold"; }
-function gradeCall(call,alpha){ if(alpha==null) return "-"; const c=(call||"").toLowerCase(); if(c==="buy") return alpha>0?"HIT":"MISS"; if(c==="sell") return alpha<0?"HIT":"MISS"; return "hold"; }
+function gradeCall(call,alpha){ if(alpha==null) return "-"; const c=(call||"").toLowerCase(); if(c==="sell") return alpha<0?"HIT":"MISS"; return alpha>0?"HIT":"MISS"; }   // Sell wins when the stock lags; Buy & Hold win when it leads
 function alphaPeriods(o){   // one graded call per dated stance (return during each, absolute + vs index)
   const h=activeSorted(o), tk=o.ticker, bench=benchFromTicker(tk);
   return h.map((e,i)=>{ const end=i<h.length-1?h[i+1].date:(o.closeDate||null), abs=periodRet(tk,e.date,end), b=periodRet(bench,e.date,end), rel=(abs!=null&&b!=null)?abs-b:null;
@@ -673,7 +673,11 @@ function alphaLogTable(){
   const closedHead=`<tr><th style="text-align:left">History</th><th style="text-align:left">Entry date</th><th style="text-align:left">Ticker</th><th style="text-align:left">Stock</th><th style="text-align:left">Call</th><th class="num">Entry price</th><th>Close date</th><th class="num">Close price</th><th class="num">Return</th><th class="num">vs Index</th><th class="num">Result</th><th>Comment</th><th></th></tr>`;
   const closedTable = closed.length ? `<div style="margin-top:24px" class="desc"><b>Closed calls</b> — calls you've closed; returns are <b>frozen</b> at the close date. Open <b>History</b> (▸) for the full call log; <b>Reopen</b> to resume.</div>
     <div class="tw"><table><thead>${closedHead}</thead><tbody>${closed.map(alphaLogClosedRow).join("")}</tbody></table></div>` : "";
-  return `<div class="desc">${esc(analystName(selAnalyst))}'s timed <b>Buy/Sell/Hold</b> calls — type a <b>Ticker</b> (pick the exact listing), then <b>Set call</b> to record your call and the <b>date you made it</b>. Calls are a <b>locked record</b> — you can't edit them; you can only <b>Change</b> (log a new dated call) or <b>Close call</b> (freeze the return &amp; move it to <b>Closed calls</b> below). Each dated call is <b>graded HIT/MISS on its alpha</b> (Hold excluded; <b>*</b> = open, marked-to-market). Open <b>History</b> (▸) for the full call log and the <b>lifetime</b> total.</div>
+  const editing=canEdit(selAnalyst);
+  const howto=editing?`<div class="desc" style="margin-bottom:6px"><b>Add a call:</b> type a ticker and pick the exact listing from the dropdown, click <b>Set call</b>, then choose <b>Buy / Sell / Hold</b> and the date you made the call. The stock name, entry price and live return fill in automatically.</div>
+    <div class="desc" style="margin-bottom:6px"><b>Calls are locked once saved</b> — you can't edit a past call. Click <b>Change</b> to log a new dated call, or <b>Close call</b> to freeze the return and move it to <b>Closed calls</b> below.</div>`:"";
+  const legend=`<div class="desc">Open the <b>▸ History</b> in the first column for a stock's full call log and lifetime return · ${editing?"click the <b>☆ star</b> beside a name to mark it a <b>high-conviction</b> call":"a <b>★</b> marks a <b>high-conviction</b> call"} · every call is scored <b>HIT / MISS</b> versus its index (<b>*</b> = still open, updating live).</div>`;
+  return `${howto}${legend}
     <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>
     <div class="addbar"><button class="btn sm" data-addcall>+ Log call</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search — name and price fill in automatically.</span></div>
     ${closedTable}`;
