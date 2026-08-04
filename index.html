@@ -502,7 +502,7 @@ function buildNav(){
 function parseHash(){
   const parts=(location.hash||"").replace(/^#/,"").split("/").filter(Boolean);
   if(parts[0]&&TABS.some(t=>t[0]===parts[0])) view=parts[0];
-  if(view==="analysts"){ if(parts[1]) selAnalyst=parts[1]; if(parts[2]&&["calls","coverage"].includes(parts[2])) section=parts[2]; }
+  if(view==="analysts"){ if(parts[1]) selAnalyst=parts[1]; section="calls"; }
 }
 function syncHash(){ let h="#"+view; if(view==="analysts") h+="/"+(selAnalyst||"")+"/"+section; try{history.replaceState(null,"",h);}catch(e){} }
 window.addEventListener("hashchange",()=>{const before=view+selAnalyst+section; parseHash(); if(view+selAnalyst+section!==before){buildNav();render();}});
@@ -540,30 +540,15 @@ function renderAnalysts(){
   const analysts=BOOK.analysts||[];
   if(!selAnalyst&&analysts[0]) selAnalyst=analysts[0].id;
   const tabs=`<div class="seg">${analysts.map(a=>`<button class="${a.id===selAnalyst?"on":""}" data-analyst="${a.id}">${esc(a.name)}</button>`).join("")}<button data-analyst="__new" title="Add analyst">＋</button></div>`;
-  if(!["calls","coverage"].includes(section)) section="calls";
+  section="calls";   // Stock Ideas is the only section (Coverage List removed)
   const sum=analystSummary(selAnalyst);
-  const scope = tileScope==="auto" ? (section==="coverage"?"coverage":"alpha") : tileScope;
-  const scopeLbl={alpha:"Alpha calls",coverage:"Coverage list",total:"Alpha + Coverage"}[scope];
-  const tileToggle=`<div class="seg small">${[["auto","Auto"],["alpha","Alpha"],["coverage","Coverage"],["total","Total"]].map(s=>`<button class="${s[0]===tileScope?"on":""}" data-tilescope="${s[0]}">${s[1]}</button>`).join("")}</div>`;
-  let cells;
-  if(scope==="coverage"){ const cs=coverageSummary(selAnalyst);
-    cells=`<div class="tile"><div class="k">Overall return</div><div class="v">${pctSpan(cs.avgRet)}</div><div class="small">avg since first covered</div></div>
-      <div class="tile"><div class="k">Return vs benchmark</div><div class="v">${pctSpan(cs.avgRel)}</div><div class="small">avg vs index</div></div>
-      <div class="tile"><div class="k">Coverage</div><div class="v">${cs.names} <small>${cs.names===1?"name":"names"}</small></div><div class="small">${plur(cs.changes,"rating change")}</div></div>`;
-  } else if(scope==="total"){ const ts=totalSummary(selAnalyst);
-    cells=`<div class="tile"><div class="k">Overall return</div><div class="v">${pctSpan(ts.avgRet)}</div><div class="small">calls &amp; coverage</div></div>
-      <div class="tile"><div class="k">Return vs benchmark</div><div class="v">${pctSpan(ts.avgRel)}</div><div class="small">avg vs index / alpha</div></div>
-      <div class="tile"><div class="k">Positions</div><div class="v">${ts.calls+ts.names} <small>${plur(ts.calls,"call")} · ${plur(ts.names,"name")}</small></div><div class="small">Alpha + Coverage</div></div>`;
-  } else {
-    cells=`<div class="tile"><div class="k">Overall return</div><div class="v">${pctSpan(sum.avgRet)}</div><div class="small">avg per call</div></div>
+  const cells=`<div class="tile"><div class="k">Overall return</div><div class="v">${pctSpan(sum.avgRet)}</div><div class="small">avg per call</div></div>
       <div class="tile"><div class="k">Hit rate</div><div class="v">${sum.hitPct==null?"–":Math.round(sum.hitPct*100)+"%"}</div><div class="small">${sum.hits}/${sum.scored} scored${sum.scored<5?" · small sample":""}</div></div>
       <div class="tile"><div class="k">Return vs benchmark</div><div class="v">${pctSpan(sum.avgAlpha)}</div><div class="small">avg alpha per call</div></div>
       <div class="tile"><div class="k">Calls</div><div class="v">${sum.nCalls} <small>${sum.openNames} open · ${sum.closedNames} closed</small></div><div class="small">${sum.nNames} ${sum.nNames===1?"name":"names"}</div></div>`;
-  }
-  const tiles=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px"><span class="small" style="color:var(--muted)">KPIs · <b style="color:var(--text-2)">${scopeLbl}</b>${tileScope==="auto"?" (auto)":""}</span>${tileToggle}</div><div class="grid tiles">${cells}</div>`;
-  const segs=`<div class="seg small">${[["calls","Alpha"],["coverage","Coverage List"]].map(s=>`<button class="${s[0]===section?"on":""}" data-section="${s[0]}">${s[1]}</button>`).join("")}</div>`;
-  const body = section==="coverage" ? coverageTable() : alphaLogTable();
-  return tabs+tiles+`<div class="panel">${segs}${body}</div>`;
+  const tiles=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px"><span class="small" style="color:var(--muted)">KPIs · <b style="color:var(--text-2)">Stock Ideas</b></span></div><div class="grid tiles">${cells}</div>`;
+  const segs=`<div class="seg small"><button class="on" data-section="calls">Stock Ideas</button></div>`;
+  return tabs+tiles+`<div class="panel">${segs}${alphaLogTable()}</div>`;
 }
 function idxCell(s){
   if(s.stockRet==null) return `<td class="num flat">–</td>`;  // don't show a (default) index for an unpriced stock
