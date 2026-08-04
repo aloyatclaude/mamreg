@@ -920,11 +920,15 @@ function logCallModal(callId){   // explicit, dated Buy/Sell/Hold call → recor
   root.querySelector("#ncSave").onclick=()=>{
     const date=root.querySelector("#ncDate").value||today, call=root.querySelector("#ncCall").value;
     if(!date){alert("Pick a date.");return;}
+    // capture a ticker typed on the row but not yet committed (user typed, no dropdown pick / no blur)
+    const rowInp=document.querySelector(`#views tr[data-id="${callId}"] input[data-f="ticker"]`);
+    if(rowInp){ const tv=rowInp.value.trim(); if(tv&&tv!==o.ticker){ o.ticker=tv; o.country=countryFromTicker(tv); o.currency=ccyFromTicker(tv); } }
     if(!Array.isArray(o.history)) o.history=[];
     delete o.closeDate;   // logging a new call reopens the name
     const existing=o.history.find(x=>x.date===date&&!x.deleted);   // one active call per date (upsert)
     if(existing) existing.call=call; else o.history.push({id:"hx-"+Date.now().toString(36),date,call});
     openCov.add(callId); save(); root.innerHTML=""; render();
+    if(o.ticker) ensurePriced(o.ticker);   // resolve + price + re-render so Entry price / returns auto-populate
   };
 }
 function addCoverage(){const id="cov-"+Date.now().toString(36);
@@ -950,11 +954,15 @@ function changeRatingModal(covId){   // explicit, dated call → recorded in the
   root.querySelector("#ncSave").onclick=()=>{
     const date=root.querySelector("#ncDate").value||today, rating=root.querySelector("#ncRating").value;
     if(!date){alert("Pick a date.");return;}
+    // capture a ticker typed on the row but not yet committed (user typed, no dropdown pick / no blur)
+    const rowInp=document.querySelector(`#views tr[data-id="${covId}"] input[data-f="ticker"]`);
+    if(rowInp){ const tv=rowInp.value.trim(); if(tv&&tv!==o.ticker){ o.ticker=tv; o.country=countryFromTicker(tv); o.currency=ccyFromTicker(tv); } }
     if(!Array.isArray(o.history)) o.history=[];
     delete o.closeDate;   // logging a new call reopens coverage
     const existing=o.history.find(x=>x.date===date&&!x.deleted);   // one active call per date (upsert)
     if(existing) existing.rating=rating; else o.history.push({id:"hx-"+Date.now().toString(36),date,rating});
     openCov.add(covId); save(); root.innerHTML=""; render();
+    if(o.ticker) ensurePriced(o.ticker);   // resolve + price + re-render so Entry price / returns auto-populate
   };
 }
 function closeCoverageModal(covId){   // freeze the current call's return on a date; mark the name Closed
@@ -1029,7 +1037,8 @@ async function runSearch(inp,q){
 function pickTicker(inp,sym,name){
   const tr=inp.closest("tr"); if(!tr)return; const obj=(BOOK[tr.dataset.coll]||[]).find(o=>o.id===tr.dataset.id); if(!obj)return;
   obj.ticker=sym; obj.name=name||obj.name; obj.country=countryFromTicker(sym); obj.currency=ccyFromTicker(sym);
-  hideDD(); save(); ensurePriced(sym);
+  inp.value=sym;   // reflect the resolved symbol so a later blur `change` re-commits the same symbol, not the raw typed text
+  hideDD(); save(); ensurePriced(sym);   // ensurePriced ends with render() → the row refreshes with price + name
 }
 
 /* ---------- price chart modal ---------- */
