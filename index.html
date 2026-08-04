@@ -664,7 +664,6 @@ function alphaLogDetail(o){   // the call log — locked record of dated Buy/Sel
     <table style="width:auto;min-width:560px"><thead><tr><th style="text-align:left">Date of call</th><th style="text-align:left">Call</th><th style="text-align:left">Period</th><th class="num">Return</th><th class="num">vs Index</th><th class="num">Result</th><th></th></tr></thead>
       <tbody>${rows}</tbody><tfoot>${foot}</tfoot></table>
     ${delBlock}
-    <div class="small" style="margin-top:8px;color:var(--muted)">Calls are a locked record. <b>Change</b> logs a new dated call · <b>Close</b> freezes the return · <b>✕</b> deletes (kept above with ↺ restore).</div>
   </td></tr>`;
 }
 function alphaLogTable(){
@@ -681,7 +680,7 @@ function alphaLogTable(){
   const legend=`<div class="desc">Open the <b>▸ History</b> in the first column for a stock's full call log and lifetime return · ${editing?"click the <b>☆ star</b> beside a name to mark it a <b>high-conviction</b> call":"a <b>★</b> marks a <b>high-conviction</b> call"} · every call is scored <b>HIT / MISS</b> versus its index (<b>*</b> = still open, updating live).</div>`;
   return `${howto}${legend}
     <div class="tw"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>
-    <div class="addbar"><button class="btn sm" data-addcall>+ Log call</button><span class="small">Attributed to ${esc(analystName(selAnalyst))}. Type in the <b>Ticker</b> box to search — name and price fill in automatically.</span></div>
+    <div class="addbar"><button class="btn sm" data-addcall>+ Log call</button></div>
     ${closedTable}`;
 }
 /* ---------- COVERAGE (own list: dated OW/N/UW stance + return attribution) ---------- */
