@@ -520,6 +520,8 @@ function render(){
 function applyPermissions(){   // read-only gating (UX only — the Worker is the real boundary)
   const v=document.getElementById("views"); if(!v) return;
   if(!canAddAnalyst()) v.querySelectorAll('[data-analyst="__new"]').forEach(el=>el.style.display="none");
+  // deleting a logged call is admin-only (editors get Change/Close/Reopen; the unlogged-draft ✕ stays)
+  if(ROLE.role!=="admin") v.querySelectorAll(".adminonly,[data-covdel],[data-covrestore]").forEach(el=>el.style.display="none");
   const editable = view==="holdings" ? canEditHoldings() : canEdit(selAnalyst);
   if(editable){ v.classList.remove("viewonly"); return; }
   v.classList.add("viewonly");
@@ -599,8 +601,8 @@ function alphaLogRow(o){   // ACTIVE / no-call rows (closed rows render via alph
     ? `<span data-covtoggle style="cursor:pointer;user-select:none;color:var(--text-2)" title="Call log">${open?"▾":"▸"} ${nActive}</span>`
     : `<span class="flat">–</span>`;
   const lastCell = state==="active"
-    ? `<button class="btn sm" data-callclose="${o.id}" style="padding:2px 9px" title="Close this call — freeze the return on a date and move it to Closed calls">Close call</button>`
-    : `<span class="del" data-del title="Delete this empty name">✕</span>`;
+    ? `<button class="btn sm" data-callclose="${o.id}" style="padding:2px 9px" title="Close this call — freeze the return on a date and move it to Closed calls">Close call</button> <span class="del adminonly" data-del title="Delete this call (admin only)">✕</span>`
+    : `<span class="del" data-del title="Discard this empty draft">✕</span>`;
   const main=`<tr data-id="${o.id}" data-coll="calls">
     <td style="white-space:nowrap">${histCell}</td>
     <td>${entryCell}</td>
@@ -637,7 +639,7 @@ function alphaLogClosedRow(o){   // a closed name — frozen returns + call-log 
     <td class="num">${(now&&now.rel!=null)?pctSpan(now.rel)+(benchNm?` <span class="tag">${esc(benchNm)}</span>`:""):'<span class="flat">–</span>'}</td>
     <td class="num">${now?resultBadge(now.result,false):`<span class="flat">–</span>`}</td>
     <td>${noteIcon("calls",o,"Comment")}</td>
-    <td style="white-space:nowrap"><button class="btn sm ghost" data-callreopen="${o.id}" style="padding:2px 9px" title="Reopen — resume this call (un-close)">Reopen</button></td></tr>`;
+    <td style="white-space:nowrap"><button class="btn sm ghost" data-callreopen="${o.id}" style="padding:2px 9px" title="Reopen — resume this call (un-close)">Reopen</button> <span class="del adminonly" data-del title="Delete this call (admin only)">✕</span></td></tr>`;
   return main+(open?alphaLogDetail(o):"");
 }
 function alphaLogDetail(o){   // the call log — locked record of dated Buy/Sell/Hold, per-period return + lifetime
